@@ -17,10 +17,15 @@ package com.navercorp.pinpoint.channel.reactor;
 
 import reactor.core.Disposable;
 
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * @author youngjin.kim2
+ *
+ * Ensure delegated disposable is run at least once.
+ * <br>
+ * Even if the delegated disposable is set after the DeferredDisposable is disposed,
+ * the delegated disposable is executed.
  */
 public class DeferredDisposable implements Disposable {
 
@@ -29,20 +34,26 @@ public class DeferredDisposable implements Disposable {
     private static final Disposable COMPLETE = () -> {
     };
 
-    private final AtomicReference<Disposable> delegateRef = new AtomicReference<>(UNINITIALIZED);
+    private static final AtomicReferenceFieldUpdater<DeferredDisposable, Disposable> UPDATER
+            = AtomicReferenceFieldUpdater.newUpdater(DeferredDisposable.class, Disposable.class, "delegate");
+
+    private volatile Disposable delegate = UNINITIALIZED;
+
+
 
     @Override
     public void dispose() {
-        this.delegateRef.getAndSet(COMPLETE).dispose();
+        Disposable disposable = UPDATER.getAndSet(this, COMPLETE);
+        disposable.dispose();
     }
 
     @Override
     public boolean isDisposed() {
-        return this.delegateRef.get() == COMPLETE;
+        return UPDATER.get(this) == COMPLETE;
     }
 
     public void setDisposable(Disposable target) {
-        if (!this.delegateRef.compareAndSet(UNINITIALIZED, target)) {
+        if (!UPDATER.compareAndSet(this, UNINITIALIZED, target)) {
             target.dispose();
         }
     }

@@ -24,6 +24,8 @@ import java.util.StringTokenizer;
 
 public final class StringUtils {
 
+    public static final String EMPTY_STRING = "";
+
     private static final int DEFAULT_ABBREVIATE_MAX_WIDTH = 64;
 
     private static final String NULL_STRING = "null";
@@ -44,6 +46,45 @@ public final class StringUtils {
     public static boolean isEmpty(final String string) {
         return string == null || string.isEmpty();
     }
+
+
+    public static String trim(final String str) {
+        return str == null ? null : str.trim();
+    }
+
+    public static String trimToEmpty(final String str) {
+        return str == null ? EMPTY_STRING : str.trim();
+    }
+
+    public static String rightTrim(final String string) {
+        return rightTrim0(string, null);
+    }
+
+    public static String rightTrimToEmpty(final String string) {
+        return rightTrim0(string, "");
+    }
+
+    private static String rightTrim0(final String string, String defaultString) {
+        if (string == null) {
+            return defaultString;
+        }
+        if (string.isEmpty()) {
+            return "";
+        }
+        final int length = string.length();
+        int index = length - 1;
+        while (index >= 0 && string.charAt(index) <= ' ') {
+            index--;
+        }
+        index++;
+
+        if (index == length) {
+            return string;
+        } else {
+            return string.substring(0, index);
+        }
+    }
+
 
     public static boolean hasLength(final String string) {
         return string != null && !string.isEmpty();
@@ -74,11 +115,23 @@ public final class StringUtils {
         return string.length();
     }
 
+    /**
+     * alternative to {@link String#valueOf(Object)}
+     */
+    @Deprecated
     public static String toString(final Object object) {
         if (object == null) {
             return NULL_STRING;
         }
         return object.toString();
+    }
+
+    public static boolean startWith(String str, String prefix) {
+        return str != null && str.startsWith(prefix);
+    }
+
+    public static boolean contains(String str, String prefix) {
+        return str != null && str.contains(prefix);
     }
 
 

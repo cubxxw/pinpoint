@@ -23,14 +23,14 @@ import com.navercorp.pinpoint.grpc.trace.PCmdResponse;
 import com.navercorp.pinpoint.realtime.collector.receiver.grpc.GrpcAgentConnection;
 import com.navercorp.pinpoint.realtime.collector.receiver.grpc.GrpcAgentConnectionRepository;
 import com.navercorp.pinpoint.realtime.collector.service.EchoService;
+import com.navercorp.pinpoint.realtime.collector.sink.EchoPublisher;
 import com.navercorp.pinpoint.realtime.collector.sink.SinkRepository;
+import com.navercorp.pinpoint.realtime.dto.CommandType;
 import com.navercorp.pinpoint.realtime.dto.Echo;
-import com.navercorp.pinpoint.thrift.io.TCommandType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.MonoSink;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -48,12 +48,12 @@ public class GrpcEchoServiceTest {
 
     private static final long SINK_ID = 0;
 
-    @Mock SinkRepository<MonoSink<PCmdEchoResponse>> sinkRepository;
+    @Mock SinkRepository<EchoPublisher> sinkRepository;
     @Mock GrpcAgentConnection connection;
     @Mock GrpcAgentConnectionRepository connectionRepository;
     @Test
     public void test() {
-        AtomicReference<MonoSink<PCmdEchoResponse>> sinkRef = new AtomicReference<>();
+        AtomicReference<EchoPublisher> sinkRef = new AtomicReference<>();
 
         doAnswer(inv -> {
             sinkRef.set(inv.getArgument(0));
@@ -65,12 +65,12 @@ public class GrpcEchoServiceTest {
             assertThat(req.getRequestId()).isEqualTo(SINK_ID);
             assertThat(req.getCommandCase()).isEqualTo(PCmdRequest.CommandCase.COMMANDECHO);
 
-            MonoSink<PCmdEchoResponse> sink = sinkRef.get();
-            sink.success(mockResponse());
+            EchoPublisher sink = sinkRef.get();
+            sink.publish(mockResponse());
             return null;
         }).when(connection).request(any());
 
-        doReturn(List.of(TCommandType.ECHO)).when(connection)
+        doReturn(List.of(CommandType.ECHO)).when(connection)
                 .getSupportCommandList();
 
         ClusterKey clusterKey = ClusterKey.parse("application-name:agent-id:1234");

@@ -33,7 +33,6 @@ import java.sql.Statement;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.function.Function;
 
 public class PinotAsyncTemplate {
@@ -57,15 +56,15 @@ public class PinotAsyncTemplate {
         this.exceptionTranslator = new MyBatisExceptionTranslator(dataSource, true);
     }
 
-    public <E> Future<List<E>> selectList(String statement) {
+    public <E> CompletableFuture<List<E>> selectList(String statement) {
         return this.selectList(statement, null, RowBounds.DEFAULT);
     }
 
-    public <E> Future<List<E>> selectList(String statement, Object parameter) {
+    public <E> CompletableFuture<List<E>> selectList(String statement, Object parameter) {
         return this.selectList(statement, parameter, RowBounds.DEFAULT);
     }
 
-    private <E> Future<List<E>> selectList(String statement, Object parameter, RowBounds rowBounds) {
+    private <E> CompletableFuture<List<E>> selectList(String statement, Object parameter, RowBounds rowBounds) {
         WrappedPinotConnection connection = null;
         try {
             connection = (WrappedPinotConnection) dataSource.getConnection();
@@ -79,9 +78,8 @@ public class PinotAsyncTemplate {
             ParameterHandler parameterHandler = configuration.newParameterHandler(mappedStatement, parameter, boundSql);
             bindParameter(pinotStatement, parameterHandler);
 
-            //TODO : (minwoo) It would be nice to output the parameters as well.
             if (logger.isDebugEnabled()) {
-                logger.debug("[pinot statement info] statement:{} \n\t\t\t\t ", boundSql.getSql());
+                logger.debug("[pinot sql statement info]\n statement : \n {} \n\t\t\t\t \n parameter object : {} ", boundSql.getSql(), parameter);
             }
 
             Executor executor = configuration.newExecutor(transactionFactory.newTransaction(connection));
@@ -121,10 +119,10 @@ public class PinotAsyncTemplate {
         return fetchSize;
     }
 
-    private <E> Future<List<E>> executeAsync(java.sql.Connection connection, PreparedStatement preparedStatement,
+    private <E> CompletableFuture<List<E>> executeAsync(java.sql.Connection connection, PreparedStatement preparedStatement,
                                              StatementHandler handler) {
-        Future<ResultSetGroup> resultSetGroupFuture = preparedStatement.executeAsync();
-        Future<List<E>> transformFuture = new TransformFuture<>(resultSetGroupFuture, new Function<ResultSetGroup, List<E>> () {
+        CompletableFuture<ResultSetGroup> resultSetGroupFuture = preparedStatement.executeAsync();
+        return resultSetGroupFuture.thenApply(new Function<ResultSetGroup, List<E>>() {
             @Override
             public List<E> apply(ResultSetGroup resultSetGroup) {
                 try (ResultSet resultSet = toResultSet(resultSetGroup);) {
@@ -135,12 +133,11 @@ public class PinotAsyncTemplate {
                 }
             }
         });
-        return transformFuture;
     }
 
     private RuntimeException translateException(Throwable th) {
-        if (th instanceof PersistenceException) {
-            DataAccessException dataAccessException = exceptionTranslator.translateExceptionIfPossible((PersistenceException) th);
+        if (th instanceof PersistenceException persistenceException) {
+            DataAccessException dataAccessException = exceptionTranslator.translateExceptionIfPossible(persistenceException);
             if (dataAccessException != null) {
                 return dataAccessException;
             }
@@ -152,6 +149,11 @@ public class PinotAsyncTemplate {
         if (resultSetGroup == null) {
 //            return null or empty??
             return PinotResultSet.empty();
+        }
+        if (!resultSetGroup.getExceptions().isEmpty()) {
+            for (Exception exception : resultSetGroup.getExceptions()) {
+                logger.error(" exception occurred during the execution of the query. :{}", exception.getMessage(), exception);
+            }
         }
         if (resultSetGroup.getResultSetCount() == 0) {
             return PinotResultSet.empty();

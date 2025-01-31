@@ -16,6 +16,8 @@
 
 package com.navercorp.pinpoint.metric.web.model.chart;
 
+import com.navercorp.pinpoint.metric.common.model.chart.Point;
+
 import java.util.List;
 
 public class Chart<P extends Point> {

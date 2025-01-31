@@ -19,11 +19,13 @@ package com.navercorp.pinpoint.common.hbase.config;
 
 import com.navercorp.pinpoint.common.hbase.HbaseTable;
 import com.navercorp.pinpoint.common.hbase.TableNameProvider;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.util.StopWatch;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -47,8 +49,9 @@ public class Warmup implements Consumer<Connection> {
     }
 
     public void warmup(Connection connection) {
+        String warmup = this.getClass().getSimpleName();
 
-        logger.info("warmup for hbase connection started");
+        logger.info("{} for hbase Connection started", warmup);
         List<HbaseTable> warmUpInclusive = new ArrayList<>(List.of(HbaseTable.values()));
         if (warmUpExclusive != null) {
             warmUpInclusive.removeAll(warmUpExclusive);
@@ -57,12 +60,24 @@ public class Warmup implements Consumer<Connection> {
         for (HbaseTable hBaseTable : warmUpInclusive) {
             try {
                 TableName tableName = tableNameProvider.getTableName(hBaseTable);
-                logger.info("warmup for hbase table start: {}", tableName.toString());
-                RegionLocator regionLocator = connection.getRegionLocator(tableName);
-                regionLocator.getAllRegionLocations();
+                logger.info("{} for hbase table start: {}", warmup, tableName.toString());
+
+                StopWatch stopWatch = new StopWatch(this.getClass().getName() + "-" + tableName.getNameAsString());
+                stopWatch.start();
+
+                List<HRegionLocation> allRegions = getAllRegions(connection, tableName);
+
+                stopWatch.stop();
+                logger.info("{} allRegionLocations {}  regionSize:{} {}ms", warmup, tableName, allRegions.size(), stopWatch.getTotalTimeMillis());
             } catch (IOException e) {
-                logger.warn("Failed to warmup for Table:{}. message:{}", hBaseTable.getName(), e.getMessage(), e);
+                logger.warn("Failed to {} for Table:{}. message:{}", warmup, hBaseTable.getName(), e.getMessage(), e);
             }
+        }
+    }
+
+    private List<HRegionLocation> getAllRegions(Connection connection, TableName tableName) throws IOException {
+        try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
+            return regionLocator.getAllRegionLocations();
         }
     }
 

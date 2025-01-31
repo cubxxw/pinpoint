@@ -37,29 +37,26 @@ public class BatchProperties {
     @Value("${batch.server.env}")
     private String batchEnv;
 
-    @Value("${batch.flink.server}")
-    private String[] flinkServerList = new String[0];
-
-    @Value("${batch.flink.rest.port:8081}")
-    private int flinkRestPort;
-
     @Value("${job.alarm.enable:true}")
     private boolean alarmJobEnable;
 
     @Value("${job.alarm.cron}")
     private String alarmJobCron;
 
+    @Value("${job.alarm.agent.inspector.stat.table.count}")
+    private int alarmAgentInspectorStatTableCount;
+
+    @Value("${job.alarm.agent.inspector.stat.table.prefix}")
+    private String agentInspectorStatTablePrefix;
+
+    @Value("${job.alarm.agent.inspector.stat.table.padding.length}")
+    private int agentInspectorStatTablePaddingLength;
+
     @Value("${job.agent.count.enable:true}")
     private boolean agentCountJobEnable;
 
     @Value("${job.agent.count.cron}")
     private String agentCountJobCron;
-
-    @Value("${job.flink.check.enable:true}")
-    private boolean flinkCheckJobEnable;
-
-    @Value("${job.flink.check.cron}")
-    private String flinkCheckJobCron;
 
     @Value("${job.cleanup.inactive.agents.enable:true}")
     private boolean cleanupInactiveAgentsJobEnable;
@@ -75,6 +72,12 @@ public class BatchProperties {
 
     @Value("${job.cleanup.inactive.agents.duration.days:30}")
     private int cleanupInactiveAgentsDurationDays;
+
+    @Value("${job.cleanup.inactive.applications.enable:false}")
+    private boolean cleanupInactiveApplicationsJobEnable;
+
+    @Value("${job.cleanup.inactive.applications.cron}")
+    private String cleanupInactiveApplicationsJobCron;
 
     private static final int MINIMUM_CLEANUP_INACTIVE_AGENTS_DURATION_DAYS = 7;
 
@@ -99,14 +102,6 @@ public class BatchProperties {
         logger.info("after setup field : {}", this);
         AnnotationVisitor<Value> annotationVisitor = new AnnotationVisitor<>(Value.class);
         annotationVisitor.visit(this, new LoggingEvent(this.logger));
-    }
-
-    public List<String> getFlinkServerList() {
-        return Arrays.asList(flinkServerList);
-    }
-
-    public int getFlinkRestPort() {
-        return flinkRestPort;
     }
 
     public String getBatchEnv() {
@@ -141,39 +136,52 @@ public class BatchProperties {
         return agentCountJobCron;
     }
 
-    public boolean isFlinkCheckJobEnable() {
-        return flinkCheckJobEnable;
-    }
-
-    public String getFlinkCheckJobCron() {
-        return flinkCheckJobCron;
-    }
-
     public String getUriStatAlarmJobCron() {
         return uriStatAlarmJobCron;
     }
+
     public int getCleanupInactiveAgentsDurationDays() {
         return cleanupInactiveAgentsDurationDays;
+    }
+
+    public boolean isCleanupInactiveApplicationsJobEnable() {
+        return cleanupInactiveApplicationsJobEnable;
+    }
+
+    public String getCleanupInactiveApplicationsJobCron() {
+        return cleanupInactiveApplicationsJobCron;
+    }
+
+    public int getAgentInspectorStatTableCount() {
+        return alarmAgentInspectorStatTableCount;
+    }
+
+    public String getAgentInspectorStatTablePrefix() {
+        return agentInspectorStatTablePrefix;
+    }
+
+    public int getAgentInspectorStatTablePaddingLength() {
+        return agentInspectorStatTablePaddingLength;
     }
 
     @Override
     public String toString() {
         return "BatchProperties{" +
-                "logger=" + logger +
-                ", batchEnv='" + batchEnv + '\'' +
-                ", flinkServerList=" + Arrays.toString(flinkServerList) +
-                ", flinkRestPort=" + flinkRestPort +
+                "batchEnv='" + batchEnv + '\'' +
                 ", alarmJobEnable=" + alarmJobEnable +
                 ", alarmJobCron='" + alarmJobCron + '\'' +
+                ", alarmAgentInspectorStatTableCount=" + alarmAgentInspectorStatTableCount +
+                ", agentInspectorStatTablePrefix='" + agentInspectorStatTablePrefix + '\'' +
+                ", agentInspectorStatTablePaddingLength=" + agentInspectorStatTablePaddingLength +
                 ", agentCountJobEnable=" + agentCountJobEnable +
                 ", agentCountJobCron='" + agentCountJobCron + '\'' +
-                ", flinkCheckJobEnable=" + flinkCheckJobEnable +
-                ", flinkCheckJobCron='" + flinkCheckJobCron + '\'' +
                 ", cleanupInactiveAgentsJobEnable=" + cleanupInactiveAgentsJobEnable +
                 ", cleanupInactiveAgentsJobCron='" + cleanupInactiveAgentsJobCron + '\'' +
                 ", uriStatAlarmJobEnable=" + uriStatAlarmJobEnable +
                 ", uriStatAlarmJobCron='" + uriStatAlarmJobCron + '\'' +
                 ", cleanupInactiveAgentsDurationDays=" + cleanupInactiveAgentsDurationDays +
+                ", cleanupInactiveApplicationsJobEnable=" + cleanupInactiveApplicationsJobEnable +
+                ", cleanupInactiveApplicationsJobCron='" + cleanupInactiveApplicationsJobCron + '\'' +
                 '}';
     }
 }

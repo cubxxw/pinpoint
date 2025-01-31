@@ -27,7 +27,7 @@ import com.navercorp.pinpoint.grpc.trace.PResult;
 import com.navercorp.pinpoint.grpc.trace.PStringMetaData;
 import com.navercorp.pinpoint.io.request.ServerRequest;
 import com.navercorp.pinpoint.io.request.ServerResponse;
-import com.navercorp.pinpoint.thrift.io.DefaultTBaseLocator;
+import com.navercorp.pinpoint.io.util.MessageType;
 import io.grpc.Status;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -50,15 +50,15 @@ public class GrpcStringMetaDataHandler implements RequestResponseHandler<Generat
     }
 
     @Override
-    public int type() {
-        return DefaultTBaseLocator.STRINGMETADATA;
+    public MessageType type() {
+        return MessageType.STRINGMETADATA;
     }
 
     @Override
     public void handleRequest(ServerRequest<GeneratedMessageV3> serverRequest, ServerResponse<GeneratedMessageV3> serverResponse) {
         final GeneratedMessageV3 data = serverRequest.getData();
-        if (data instanceof PStringMetaData) {
-            PResult result = handleStringMetaData((PStringMetaData) data);
+        if (data instanceof PStringMetaData stringMetaData) {
+            PResult result = handleStringMetaData(stringMetaData);
             serverResponse.write(result);
         } else {
             logger.warn("Invalid request type. serverRequest={}", serverRequest);

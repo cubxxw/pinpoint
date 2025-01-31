@@ -16,30 +16,22 @@
 
 package com.navercorp.pinpoint.inspector.collector.dao.pinot;
 
-import com.navercorp.pinpoint.common.server.bo.stat.ActiveTraceBo;
 import com.navercorp.pinpoint.common.server.bo.stat.AgentStatBo;
 import com.navercorp.pinpoint.common.server.bo.stat.AgentStatDataPoint;
-import com.navercorp.pinpoint.common.server.bo.stat.CpuLoadBo;
-import com.navercorp.pinpoint.common.server.bo.stat.DataSourceListBo;
-import com.navercorp.pinpoint.common.server.bo.stat.DeadlockThreadCountBo;
-import com.navercorp.pinpoint.common.server.bo.stat.DirectBufferBo;
-import com.navercorp.pinpoint.common.server.bo.stat.FileDescriptorBo;
-import com.navercorp.pinpoint.common.server.bo.stat.JvmGcBo;
-import com.navercorp.pinpoint.common.server.bo.stat.JvmGcDetailedBo;
-import com.navercorp.pinpoint.common.server.bo.stat.LoadedClassBo;
-import com.navercorp.pinpoint.common.server.bo.stat.ResponseTimeBo;
-import com.navercorp.pinpoint.common.server.bo.stat.TotalThreadCountBo;
-import com.navercorp.pinpoint.common.server.bo.stat.TransactionBo;
+import com.navercorp.pinpoint.inspector.collector.config.InspectorCollectorProperties;
 import com.navercorp.pinpoint.inspector.collector.dao.AgentStatDao;
 import com.navercorp.pinpoint.inspector.collector.model.kafka.AgentStat;
 import com.navercorp.pinpoint.inspector.collector.model.kafka.AgentStatModelConverter;
-import org.springframework.beans.factory.annotation.Value;
+import com.navercorp.pinpoint.inspector.collector.model.kafka.ApplicationStat;
+import com.navercorp.pinpoint.inspector.collector.model.kafka.ApplicationStatModelConverter;
+import com.navercorp.pinpoint.pinot.tenant.TenantProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -48,87 +40,79 @@ import java.util.function.Function;
 @Configuration
 public class PinotDaoConfiguration {
 
-    private final KafkaTemplate kafkaAgentStatTemplate;
-    private final String topic;
+    private final KafkaTemplate<String, AgentStat> kafkaAgentStatTemplate;
+    private final KafkaTemplate<String, ApplicationStat> kafkaApplicationStatTemplate;
+    InspectorCollectorProperties inspectorCollectorProperties;
+    private final TenantProvider tenantProvider;
 
-    public PinotDaoConfiguration(KafkaTemplate kafkaAgentStatTemplate, @Value("${kafka.inspector.topic}") String topic) {
+    public PinotDaoConfiguration(KafkaTemplate<String, AgentStat> kafkaAgentStatTemplate, KafkaTemplate<String, ApplicationStat> kafkaApplicationStatTemplate, InspectorCollectorProperties inspectorCollectorProperties, TenantProvider tenantProvider) {
         this.kafkaAgentStatTemplate = Objects.requireNonNull(kafkaAgentStatTemplate, "kafkaAgentStatTemplate");
-        this.topic = topic;
+        this.kafkaApplicationStatTemplate = Objects.requireNonNull(kafkaApplicationStatTemplate, "kafkaApplicationStatTemplate");
+        this.inspectorCollectorProperties = Objects.requireNonNull(inspectorCollectorProperties, "inspectorCollectorProperties");
+        this.tenantProvider = Objects.requireNonNull(tenantProvider, "tenantProvider");
     }
 
-    private <T extends AgentStatDataPoint> AgentStatDao<T> newAgentStatDao(Function<AgentStatBo, List<T>> dataPointFunction, Function<List<T>, List<AgentStat>> convertToAgentStat) {
-        return new DefaultAgentStatDao(dataPointFunction, kafkaAgentStatTemplate, convertToAgentStat, topic);
+    private <T extends AgentStatDataPoint> AgentStatDao<T> newAgentStatDao(Function<AgentStatBo, List<T>> dataPointFunction, BiFunction<List<T>, String, List<AgentStat>> convertToAgentStat, Function<List<AgentStat>, List<ApplicationStat>> convertToKafkaApplicationStat) {
+        return new DefaultAgentStatDao(dataPointFunction, kafkaAgentStatTemplate, kafkaApplicationStatTemplate, convertToAgentStat, convertToKafkaApplicationStat, inspectorCollectorProperties, tenantProvider);
     }
 
     @Bean
     public AgentStatDao getPinotCpuLoadDao() {
-        Function<List<CpuLoadBo>, List<AgentStat>> convertToAgentStat = AgentStatModelConverter::convertCpuLoadToAgentStat;
-        return newAgentStatDao(AgentStatBo::getCpuLoadBos, convertToAgentStat);
+        return newAgentStatDao(AgentStatBo::getCpuLoadBos, AgentStatModelConverter::convertCpuLoadToAgentStat, ApplicationStatModelConverter::convertToApplicationStat);
     }
 
     @Bean
     public AgentStatDao getPinotActiveTraceDao() {
-        Function<List<ActiveTraceBo>, List<AgentStat>> convertToAgentStat = AgentStatModelConverter::convertActiveTraceToAgentStat;
-        return newAgentStatDao(AgentStatBo::getActiveTraceBos, convertToAgentStat);
+        return newAgentStatDao(AgentStatBo::getActiveTraceBos, AgentStatModelConverter::convertActiveTraceToAgentStat, ApplicationStatModelConverter::convertToApplicationStat);
     }
 
     @Bean
     public AgentStatDao getPinotJvmGcDao() {
-        Function<List<JvmGcBo>, List<AgentStat>> convertToAgentStat = AgentStatModelConverter::convertJvmGcToAgentStat;
-        return newAgentStatDao(AgentStatBo::getJvmGcBos, convertToAgentStat);
+        return newAgentStatDao(AgentStatBo::getJvmGcBos, AgentStatModelConverter::convertJvmGcToAgentStat, ApplicationStatModelConverter::convertToApplicationStat);
     }
 
     @Bean
     public AgentStatDao getPinotJvmGcDetailedDao() {
-        Function<List<JvmGcDetailedBo>, List<AgentStat>> convertToAgentStat = AgentStatModelConverter::convertJvmGCDetailedToAgentStat;
-        return newAgentStatDao(AgentStatBo::getJvmGcDetailedBos, convertToAgentStat);
+        return newAgentStatDao(AgentStatBo::getJvmGcDetailedBos, AgentStatModelConverter::convertJvmGCDetailedToAgentStat, ApplicationStatModelConverter::convertToApplicationStat);
     }
 
     @Bean
     public AgentStatDao getPinotTransactionDao() {
-        Function<List<TransactionBo>, List<AgentStat>> convertToAgentStat = AgentStatModelConverter::convertTransactionToAgentStat;
-        return newAgentStatDao(AgentStatBo::getTransactionBos, convertToAgentStat);
+        return newAgentStatDao(AgentStatBo::getTransactionBos, AgentStatModelConverter::convertTransactionToAgentStat, ApplicationStatModelConverter::convertToApplicationStat);
     }
 
     @Bean
     public AgentStatDao getPinotResponseTimeDao() {
-        Function<List<ResponseTimeBo>, List<AgentStat>> convertToAgentStat = AgentStatModelConverter::convertResponseTimeToAgentStat;
-        return newAgentStatDao(AgentStatBo::getResponseTimeBos, convertToAgentStat);
+        return newAgentStatDao(AgentStatBo::getResponseTimeBos, AgentStatModelConverter::convertResponseTimeToAgentStat, ApplicationStatModelConverter::convertToApplicationStat);
     }
 
     @Bean
     public AgentStatDao getPinotDeadlockThreadCountDao() {
-        Function<List<DeadlockThreadCountBo>, List<AgentStat>> convertToAgentStat = AgentStatModelConverter::convertDeadlockThreadCountToAgentStat;
-        return newAgentStatDao(AgentStatBo::getDeadlockThreadCountBos, convertToAgentStat);
+        return newAgentStatDao(AgentStatBo::getDeadlockThreadCountBos, AgentStatModelConverter::convertDeadlockThreadCountToAgentStat, ApplicationStatModelConverter::convertToApplicationStat);
     }
 
     @Bean
     public AgentStatDao getPinotFileDescriptorDao() {
-        Function<List<FileDescriptorBo>, List<AgentStat>> convertToAgentStat = AgentStatModelConverter::convertFileDescriptorToAgentStat;
-        return newAgentStatDao(AgentStatBo::getFileDescriptorBos, convertToAgentStat);
+        return newAgentStatDao(AgentStatBo::getFileDescriptorBos, AgentStatModelConverter::convertFileDescriptorToAgentStat, ApplicationStatModelConverter::convertToApplicationStat);
     }
 
     @Bean
     public AgentStatDao getPinotDirectBufferDao() {
-        Function<List<DirectBufferBo>, List<AgentStat>> convertToAgentStat = AgentStatModelConverter::convertDirectBufferToAgentStat;
-        return newAgentStatDao(AgentStatBo::getDirectBufferBos, convertToAgentStat);
+        return newAgentStatDao(AgentStatBo::getDirectBufferBos, AgentStatModelConverter::convertDirectBufferToAgentStat, ApplicationStatModelConverter::convertToApplicationStat);
     }
 
     @Bean
     public AgentStatDao getPinotTotalThreadCountDao() {
-        Function<List<TotalThreadCountBo>, List<AgentStat>> convertToAgentStat = AgentStatModelConverter::convertTotalThreadCountToAgentStat;
-        return newAgentStatDao(AgentStatBo::getTotalThreadCountBos, convertToAgentStat);
+        return newAgentStatDao(AgentStatBo::getTotalThreadCountBos, AgentStatModelConverter::convertTotalThreadCountToAgentStat, ApplicationStatModelConverter::convertToApplicationStat);
     }
 
     @Bean
     public AgentStatDao getPinotLoadedClassDao() {
-        Function<List<LoadedClassBo>, List<AgentStat>> convertToAgentStat = AgentStatModelConverter::convertLoadedClassToAgentStat;
-        return newAgentStatDao(AgentStatBo::getLoadedClassBos, convertToAgentStat);
+        return newAgentStatDao(AgentStatBo::getLoadedClassBos, AgentStatModelConverter::convertLoadedClassToAgentStat, ApplicationStatModelConverter::convertToApplicationStat);
     }
 
     @Bean
     public AgentStatDao getPinotDataSourceListDao() {
-        Function<List<DataSourceListBo>, List<AgentStat>> convertToAgentStat = AgentStatModelConverter::convertDataSourceToAgentStat;
-        return newAgentStatDao(AgentStatBo::getDataSourceListBos, convertToAgentStat);
+        return newAgentStatDao(AgentStatBo::getDataSourceListBos, AgentStatModelConverter::convertDataSourceToAgentStat, ApplicationStatModelConverter::convertFromDataSourceStatToApplicationStat);
     }
 }

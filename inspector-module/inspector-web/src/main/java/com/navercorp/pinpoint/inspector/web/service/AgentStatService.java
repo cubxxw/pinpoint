@@ -19,7 +19,8 @@ package com.navercorp.pinpoint.inspector.web.service;
 import com.navercorp.pinpoint.inspector.web.model.InspectorDataSearchKey;
 import com.navercorp.pinpoint.inspector.web.model.InspectorMetricData;
 import com.navercorp.pinpoint.inspector.web.model.InspectorMetricGroupData;
-import com.navercorp.pinpoint.metric.web.util.TimeWindow;
+import com.navercorp.pinpoint.common.server.util.timewindow.TimeWindow;
+import com.navercorp.pinpoint.metric.common.model.chart.SystemMetricPoint;
 
 import java.util.List;
 
@@ -28,6 +29,8 @@ import java.util.List;
  */
 public interface AgentStatService {
     InspectorMetricData selectAgentStat(InspectorDataSearchKey inspectorDataSearchKey, TimeWindow timeWindow);
+
+    List<SystemMetricPoint<Double>> selectAgentStatUnconvertedTime(InspectorDataSearchKey inspectorDataSearchKey, TimeWindow timeWindow);
 
     InspectorMetricGroupData selectAgentStatWithGrouping(InspectorDataSearchKey inspectorDataSearchKey, TimeWindow timeWindow);
 }

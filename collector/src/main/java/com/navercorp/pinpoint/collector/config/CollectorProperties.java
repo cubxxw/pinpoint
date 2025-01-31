@@ -41,10 +41,22 @@ public class CollectorProperties {
     @Value("${collector.metric.jmx.domain:pinpoint.collector.metrics}")
     private String metricJmxDomainName;
 
+    @Value("${collector.span.sampling.enable:false}")
+    private boolean spanSamplingEnable;
+    @Value("${collector.span.sampling.type:MOD}")
+    private String spanSamplingType;
+    @Value("${collector.span.sampling.mod.sampling-rate:1}")
+    private long spanModSamplingRate;
+    @Value("${collector.span.sampling.percent.sampling-rate:100}")
+    private String spanPercentSamplingRate;
+
     @Value("${collector.stat.uri:false}")
     private boolean uriStatEnable;
     @Value("${collector.statistics.agent-state.enable:false}")
     private boolean statisticsAgentStateEnable;
+
+    @Value("${collector.metadata.sql.max-length:65536}")
+    private int maxSqlLength;
 
 
     public List<String> getL4IpList() {
@@ -72,6 +84,38 @@ public class CollectorProperties {
         this.metricJmxDomainName = metricJmxDomainName;
     }
 
+    public boolean isSpanSamplingEnable() {
+        return spanSamplingEnable;
+    }
+
+    public void setSpanSamplingEnable(boolean spanSamplingEnable) {
+        this.spanSamplingEnable = spanSamplingEnable;
+    }
+
+    public String getSpanSamplingType() {
+        return spanSamplingType;
+    }
+
+    public void setSpanSamplingType(String spanSamplingType) {
+        this.spanSamplingType = spanSamplingType;
+    }
+
+    public void setSpanModSamplingRate(int spanModSamplingRate) {
+        this.spanModSamplingRate = spanModSamplingRate;
+    }
+
+    public long getSpanModSamplingRate() {
+        return spanModSamplingRate;
+    }
+
+    public String getSpanPercentSamplingRate() {
+        return spanPercentSamplingRate;
+    }
+
+    public void setSpanPercentSamplingRate(String spanPercentSamplingRate) {
+        this.spanPercentSamplingRate = spanPercentSamplingRate;
+    }
+
     public boolean isUriStatEnable() {
         return uriStatEnable;
     }
@@ -88,6 +132,10 @@ public class CollectorProperties {
         return statisticsAgentStateEnable;
     }
 
+    public int getMaxSqlLength() {
+        return maxSqlLength;
+    }
+
     @PostConstruct
     public void log() {
         logger.info("{}", this);
@@ -97,13 +145,18 @@ public class CollectorProperties {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("CollectorConfiguration{");
-        sb.append(", l4IpList=").append(Arrays.toString(l4IpList));
-        sb.append(", metricJmxEnable=").append(metricJmxEnable);
-        sb.append(", metricJmxDomainName='").append(metricJmxDomainName).append('\'');
-        sb.append(", uriStatEnable=").append(uriStatEnable);
-        sb.append(", statisticsAgentStateEnable=").append(statisticsAgentStateEnable);
-        sb.append('}');
-        return sb.toString();
+        return "CollectorProperties{" +
+                "logger=" + logger +
+                ", l4IpList=" + Arrays.toString(l4IpList) +
+                ", metricJmxEnable=" + metricJmxEnable +
+                ", metricJmxDomainName='" + metricJmxDomainName + '\'' +
+                ", spanSamplingEnable=" + spanSamplingEnable +
+                ", spanSamplingType='" + spanSamplingType + '\'' +
+                ", spanModSamplingRate=" + spanModSamplingRate +
+                ", spanPercentSamplingRate='" + spanPercentSamplingRate + '\'' +
+                ", uriStatEnable=" + uriStatEnable +
+                ", statisticsAgentStateEnable=" + statisticsAgentStateEnable +
+                ", maxSqlLength=" + maxSqlLength +
+                '}';
     }
 }

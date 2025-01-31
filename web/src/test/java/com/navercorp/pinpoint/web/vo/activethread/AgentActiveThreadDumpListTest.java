@@ -23,7 +23,7 @@ import com.navercorp.pinpoint.common.server.bo.event.ThreadState;
 import com.navercorp.pinpoint.profiler.monitor.metric.deadlock.ThreadDumpMetricSnapshot;
 import com.navercorp.pinpoint.profiler.util.ThreadDumpUtils;
 import com.navercorp.pinpoint.realtime.dto.ActiveThreadDump;
-import com.navercorp.pinpoint.thrift.sender.message.ThreadStateGrpcMessageConverter;
+import com.navercorp.pinpoint.web.converter.ThreadStateGrpcMessageConverter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -164,7 +163,7 @@ public class AgentActiveThreadDumpListTest {
         dump.setLockedSynchronizerList(snapshot.getLockedSynchronizers());
         dump.setLockedMonitorInfoList(snapshot.getLockedMonitors().stream()
                 .map(el -> new MonitorInfoBo(el.getStackDepth(), el.getStackFrame()))
-                .collect(Collectors.toUnmodifiableList()));
+                .toList());
         dump.setLockName(snapshot.getLockName());
         dump.setLockOwnerId(snapshot.getLockOwnerId());
         dump.setLockOwnerName(snapshot.getLockOwnerName());

@@ -16,12 +16,12 @@
 package com.navercorp.pinpoint.web.realtime.activethread.count.service;
 
 import com.navercorp.pinpoint.common.server.cluster.ClusterKey;
-import com.navercorp.pinpoint.common.task.TimerTaskDecorator;
-import com.navercorp.pinpoint.common.task.TimerTaskDecoratorFactory;
+import com.navercorp.pinpoint.common.server.task.TaskDecoratorFactory;
 import com.navercorp.pinpoint.realtime.dto.ATCSupply;
 import com.navercorp.pinpoint.web.realtime.activethread.count.dao.ActiveThreadCountDao;
 import com.navercorp.pinpoint.web.realtime.activethread.count.dto.ActiveThreadCountResponse;
 import com.navercorp.pinpoint.web.realtime.service.AgentLookupService;
+import org.springframework.core.task.TaskDecorator;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -32,11 +32,10 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * @author youngjin.kim2
@@ -47,7 +46,7 @@ public class ActiveThreadCountServiceImpl implements ActiveThreadCountService {
 
     private final ActiveThreadCountDao atcDao;
     private final AgentLookupService agentLookupService;
-    private final TimerTaskDecoratorFactory timerTaskDecoratorFactory;
+    private final TaskDecoratorFactory taskDecoratorFactory;
     private final Scheduler scheduler;
     private final Duration emitPeriod;
     private final Duration updatePeriod;
@@ -55,14 +54,14 @@ public class ActiveThreadCountServiceImpl implements ActiveThreadCountService {
     public ActiveThreadCountServiceImpl(
             ActiveThreadCountDao atcDao,
             AgentLookupService agentLookupService,
-            TimerTaskDecoratorFactory timerTaskDecoratorFactory,
+            TaskDecoratorFactory taskDecoratorFactory,
             ScheduledExecutorService scheduledExecutor,
             Duration emitPeriod,
             Duration updatePeriod
     ) {
         this.atcDao = Objects.requireNonNull(atcDao, "atcDao");
         this.agentLookupService = Objects.requireNonNull(agentLookupService, "agentLookupService");
-        this.timerTaskDecoratorFactory = Objects.requireNonNull(timerTaskDecoratorFactory, "timerTaskDecoratorFactory");
+        this.taskDecoratorFactory = Objects.requireNonNull(taskDecoratorFactory, "taskDecoratorFactory");
         this.scheduler = Schedulers.fromExecutorService(Objects.requireNonNull(scheduledExecutor, "scheduledExecutor"));
         this.emitPeriod = Objects.requireNonNull(emitPeriod, "emitPeriod");
         this.updatePeriod = Objects.requireNonNull(updatePeriod, "updatePeriod");
@@ -70,7 +69,7 @@ public class ActiveThreadCountServiceImpl implements ActiveThreadCountService {
 
     @Override
     public Flux<ActiveThreadCountResponse> getResponses(String applicationName) {
-        TimerTaskDecorator taskDecorator = timerTaskDecoratorFactory.createTimerTaskDecorator();
+        TaskDecorator taskDecorator = taskDecoratorFactory.createDecorator();
         SupplyCollector collector = new SupplyCollector(applicationName, emitPeriod.toMillis() * 2);
 
         Map<ClusterKey, Disposable> disposableMap = new ConcurrentHashMap<>();
@@ -78,9 +77,8 @@ public class ActiveThreadCountServiceImpl implements ActiveThreadCountService {
         Disposable updateDisposable = this.scheduler.schedulePeriodically(() -> {
             getAgents(taskDecorator, applicationName).subscribe(agents -> {
                 for (ClusterKey agent : agents) {
-                    Disposable disposable = this.atcDao.getSupplies(agent).subscribe(supply -> {
-                        collector.add(supply);
-                    });
+                    Flux<ATCSupply> supplies = this.atcDao.getSupplies(agent);
+                    Disposable disposable = supplies.subscribe(collector::add);
                     Disposable prev = disposableMap.put(agent, disposable);
                     if (prev != null) {
                         Mono.delay(Duration.ofSeconds(3), this.scheduler).subscribe(t -> prev.dispose());
@@ -95,7 +93,7 @@ public class ActiveThreadCountServiceImpl implements ActiveThreadCountService {
                 .doFinally(e -> {
                     updateDisposable.dispose();
                     Mono.delay(Duration.ofMillis(500)).subscribe(t -> {
-                        for (Disposable d: disposableMap.values()) {
+                        for (Disposable d : disposableMap.values()) {
                             d.dispose();
                         }
                     });
@@ -106,9 +104,9 @@ public class ActiveThreadCountServiceImpl implements ActiveThreadCountService {
         return new ClusterKey(supply.getApplicationName(), supply.getAgentId(), supply.getStartTimestamp());
     }
 
-    private Mono<List<ClusterKey>> getAgents(TimerTaskDecorator taskDecorator, String applicationName) {
-        return Mono.<List<ClusterKey>>create(sink -> {
-            taskDecorator.decorate(new TimerTask() {
+    private Mono<List<ClusterKey>> getAgents(TaskDecorator taskDecorator, String applicationName) {
+        return Mono.create(sink -> {
+            taskDecorator.decorate(new Runnable() {
                 @Override
                 public void run() {
                     sink.success(agentLookupService.getRecentAgents(applicationName));
@@ -118,18 +116,21 @@ public class ActiveThreadCountServiceImpl implements ActiveThreadCountService {
     }
 
     private static class SupplyCollector {
+        @SuppressWarnings("rawtypes")
+        private static final AtomicReferenceFieldUpdater<SupplyCollector, List> REF
+                = AtomicReferenceFieldUpdater.newUpdater(SupplyCollector.class, List.class, "agents");
         String applicationName;
         long supplyExpiredIn;
 
         long sessionStartedAt = System.currentTimeMillis();
         long shouldConnectUntil = sessionStartedAt + MAX_CONNECTION_WAITING_MILLIS;
 
-        AtomicReference<List<ClusterKey>> agentsRef;
+        private volatile  List<ClusterKey> agents;
         Map<ClusterKey, ATCSupply> supplyMap = new ConcurrentHashMap<>();
         Map<ClusterKey, Long> updatedAtMap = new ConcurrentHashMap<>();
 
         SupplyCollector(String applicationName, long supplyExpiredIn) {
-            this.agentsRef = new AtomicReference<>(null);
+            this.agents = null;
             this.applicationName = applicationName;
             this.supplyExpiredIn = supplyExpiredIn;
         }
@@ -150,21 +151,22 @@ public class ActiveThreadCountServiceImpl implements ActiveThreadCountService {
         }
 
         public ActiveThreadCountResponse compose(Long t) {
-            List<ClusterKey> agents = this.agentsRef.get();
+            @SuppressWarnings("unchecked")
+            List<ClusterKey> agents = REF.get(this);
             if (agents == null) {
                 return null;
             }
 
             long now = System.currentTimeMillis();
             ActiveThreadCountResponse response = new ActiveThreadCountResponse(applicationName, now);
-            for (ClusterKey agent: agents) {
+            for (ClusterKey agent : agents) {
                 putAgent(response, agent, now);
             }
             return response;
         }
 
         public void updateAgents(List<ClusterKey> agents) {
-            this.agentsRef.set(agents);
+            REF.set(this, agents);
         }
 
         private void putAgent(ActiveThreadCountResponse response, ClusterKey agent, long now) {

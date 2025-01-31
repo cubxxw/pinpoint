@@ -19,8 +19,6 @@ package com.navercorp.pinpoint.realtime.collector.receiver.grpc;
 import com.google.protobuf.Empty;
 import com.navercorp.pinpoint.common.server.cluster.ClusterKey;
 import com.navercorp.pinpoint.grpc.Header;
-import com.navercorp.pinpoint.grpc.StatusError;
-import com.navercorp.pinpoint.grpc.StatusErrors;
 import com.navercorp.pinpoint.grpc.server.ServerContext;
 import com.navercorp.pinpoint.grpc.server.TransportMetadata;
 import com.navercorp.pinpoint.grpc.trace.PCmdActiveThreadCountRes;
@@ -31,16 +29,19 @@ import com.navercorp.pinpoint.grpc.trace.PCmdMessage;
 import com.navercorp.pinpoint.grpc.trace.PCmdRequest;
 import com.navercorp.pinpoint.grpc.trace.PCmdResponse;
 import com.navercorp.pinpoint.grpc.trace.ProfilerCommandServiceGrpc;
-import com.navercorp.pinpoint.realtime.collector.sink.ErrorSinkRepository;
+import com.navercorp.pinpoint.realtime.collector.sink.ActiveThreadCountPublisher;
+import com.navercorp.pinpoint.realtime.collector.sink.ActiveThreadDumpPublisher;
+import com.navercorp.pinpoint.realtime.collector.sink.ActiveThreadLightDumpPublisher;
+import com.navercorp.pinpoint.realtime.collector.sink.EchoPublisher;
+import com.navercorp.pinpoint.realtime.collector.sink.Publisher;
 import com.navercorp.pinpoint.realtime.collector.sink.SinkRepository;
+import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import reactor.core.publisher.FluxSink;
-import reactor.core.publisher.MonoSink;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -55,22 +56,19 @@ public class GrpcCommandService extends ProfilerCommandServiceGrpc.ProfilerComma
     private final Logger logger = LogManager.getLogger(this.getClass());
 
     private final GrpcAgentConnectionRepository agentConnectionRepository;
-    private final ErrorSinkRepository sinkRepository;
-    private final SinkRepository<FluxSink<PCmdActiveThreadCountRes>> activeThreadCountSinkRepo;
-    private final SinkRepository<MonoSink<PCmdActiveThreadDumpRes>> activeThreadDumpSinkRepo;
-    private final SinkRepository<MonoSink<PCmdActiveThreadLightDumpRes>> activeThreadLightDumpSinkRepo;
-    private final SinkRepository<MonoSink<PCmdEchoResponse>> echoSinkRepo;
+    private final SinkRepository<ActiveThreadCountPublisher> activeThreadCountSinkRepo;
+    private final SinkRepository<ActiveThreadDumpPublisher> activeThreadDumpSinkRepo;
+    private final SinkRepository<ActiveThreadLightDumpPublisher> activeThreadLightDumpSinkRepo;
+    private final SinkRepository<EchoPublisher> echoSinkRepo;
 
     public GrpcCommandService(
             GrpcAgentConnectionRepository agentConnectionRepository,
-            ErrorSinkRepository sinkRepository,
-            SinkRepository<FluxSink<PCmdActiveThreadCountRes>> activeThreadCountSinkRepo,
-            SinkRepository<MonoSink<PCmdActiveThreadDumpRes>> activeThreadDumpSinkRepo,
-            SinkRepository<MonoSink<PCmdActiveThreadLightDumpRes>> activeThreadLightDumpSinkRepo,
-            SinkRepository<MonoSink<PCmdEchoResponse>> echoSinkRepo
+            SinkRepository<ActiveThreadCountPublisher> activeThreadCountSinkRepo,
+            SinkRepository<ActiveThreadDumpPublisher> activeThreadDumpSinkRepo,
+            SinkRepository<ActiveThreadLightDumpPublisher> activeThreadLightDumpSinkRepo,
+            SinkRepository<EchoPublisher> echoSinkRepo
     ) {
         this.agentConnectionRepository = Objects.requireNonNull(agentConnectionRepository, "clusterPointRepository");
-        this.sinkRepository = Objects.requireNonNull(sinkRepository, "sinkRepository");
         this.activeThreadCountSinkRepo = Objects.requireNonNull(activeThreadCountSinkRepo, "activeThreadCountSinkRepo");
         this.activeThreadDumpSinkRepo = Objects.requireNonNull(activeThreadDumpSinkRepo, "activeThreadDumpSinkRepo");
         this.activeThreadLightDumpSinkRepo = Objects.requireNonNull(activeThreadLightDumpSinkRepo, "activeThreadLightDumpSinkRepo");
@@ -128,9 +126,7 @@ public class GrpcCommandService extends ProfilerCommandServiceGrpc.ProfilerComma
                         GrpcCommandService.this.agentConnectionRepository.add(conn);
                     }
                 } else if (value.hasFailMessage()) {
-                    PCmdResponse failMessage = value.getFailMessage();
-                    long sinkId = failMessage.getResponseId();
-                    sinkRepository.error(sinkId, new RuntimeException(failMessage.getMessage().getValue()));
+                    handleFail(value);
                 }
             }
 
@@ -200,9 +196,7 @@ public class GrpcCommandService extends ProfilerCommandServiceGrpc.ProfilerComma
             @Override
             public void onNext(PCmdMessage value) {
                 if (value.hasFailMessage()) {
-                    PCmdResponse failMessage = value.getFailMessage();
-                    long sinkId = failMessage.getResponseId();
-                    sinkRepository.error(sinkId, new RuntimeException(failMessage.getMessage().getValue()));
+                    handleFail(value);
                 }
             }
 
@@ -233,24 +227,28 @@ public class GrpcCommandService extends ProfilerCommandServiceGrpc.ProfilerComma
         );
     }
 
+    private void handleFail(PCmdMessage value) {
+        final PCmdResponse failMessage = value.getFailMessage();
+        final long sinkId = failMessage.getResponseId();
+        final Exception exception = new RuntimeException(failMessage.getMessage().getValue());
+        activeThreadCountSinkRepo.error(sinkId, exception);
+        activeThreadDumpSinkRepo.error(sinkId, exception);
+        activeThreadLightDumpSinkRepo.error(sinkId, exception);
+        echoSinkRepo.error(sinkId, exception);
+    }
+
     private void handleOnError(Throwable t, GrpcAgentConnection conn) {
         if (conn == null) {
             logger.warn("Command error before establishment");
             return;
         }
 
-        final StatusError statusError = StatusErrors.throwable(t);
-        if (statusError.isSimpleError()) {
-            logger.info("Failed to command stream, {} => local, cause={}",
-                    conn.getClusterKey(), statusError.getMessage());
-        } else {
-            logger.warn(
-                    "Failed to command stream, {} => local, cause={}",
-                    conn.getClusterKey(),
-                    statusError.getMessage(),
-                    statusError.getThrowable()
-            );
-        }
+        final Status status = Status.fromThrowable(t);
+        Metadata metadata = Status.trailersFromThrowable(t);
+
+        logger.info("Failed to command stream, {} => local, {} {}",
+                conn.getClusterKey(), status, metadata);
+
     }
 
     private void handleOnCompleted(GrpcAgentConnection conn) {
@@ -265,52 +263,42 @@ public class GrpcCommandService extends ProfilerCommandServiceGrpc.ProfilerComma
     @Override
     public void commandEcho(PCmdEchoResponse response, StreamObserver<Empty> responseObserver) {
         long sinkId = response.getCommonResponse().getResponseId();
-        emitMono(response, responseObserver, this.echoSinkRepo.get(sinkId));
+        final EchoPublisher publisher = this.echoSinkRepo.get(sinkId);
+        emitMono(response, responseObserver, publisher);
         this.echoSinkRepo.invalidate(sinkId);
     }
 
     @Override
     public void commandActiveThreadDump(PCmdActiveThreadDumpRes response, StreamObserver<Empty> responseObserver) {
         long sinkId = response.getCommonResponse().getResponseId();
-        emitMono(response, responseObserver, this.activeThreadDumpSinkRepo.get(sinkId));
+        final ActiveThreadDumpPublisher publisher = this.activeThreadDumpSinkRepo.get(sinkId);
+        emitMono(response, responseObserver, publisher);
         this.activeThreadDumpSinkRepo.invalidate(sinkId);
     }
 
     @Override
-    public void commandActiveThreadLightDump(
-            PCmdActiveThreadLightDumpRes response,
-            StreamObserver<Empty> responseObserver
-    ) {
+    public void commandActiveThreadLightDump(PCmdActiveThreadLightDumpRes response, StreamObserver<Empty> responseObserver) {
         long sinkId = response.getCommonResponse().getResponseId();
-        emitMono(response, responseObserver, this.activeThreadLightDumpSinkRepo.get(sinkId));
+        final ActiveThreadLightDumpPublisher publisher = this.activeThreadLightDumpSinkRepo.get(sinkId);
+        emitMono(response, responseObserver, publisher);
         this.activeThreadLightDumpSinkRepo.invalidate(sinkId);
     }
 
     @Override
-    public StreamObserver<PCmdActiveThreadCountRes> commandStreamActiveThreadCount(
-            StreamObserver<Empty> responseObserver
-    ) {
-        ServerCallStreamObserver<Empty> serverResponseObserver = (ServerCallStreamObserver<Empty>) responseObserver;
-        return new FluxCommandResponseObserver<>(serverResponseObserver, this.activeThreadCountSinkRepo) {
-            @Override
-            protected long extractSinkId(PCmdActiveThreadCountRes response) {
-                return response.getCommonStreamResponse().getResponseId();
-            }
+    public StreamObserver<PCmdActiveThreadCountRes> commandStreamActiveThreadCount(StreamObserver<Empty> responseObserver) {
+        logger.debug("commandStreamActiveThreadCount started");
 
-            @Override
-            protected int extractSequence(PCmdActiveThreadCountRes response) {
-                return response.getCommonStreamResponse().getSequenceId();
-            }
-        };
+        ServerCallStreamObserver<Empty> serverResponseObserver = (ServerCallStreamObserver<Empty>) responseObserver;
+        return new ActiveThreadCountResponseStreamObserver(serverResponseObserver, this.activeThreadCountSinkRepo);
     }
 
-    private <T> void emitMono(T response, StreamObserver<Empty> responseObserver, MonoSink<T> sink) {
+    private <T> void emitMono(T response, StreamObserver<Empty> responseObserver, Publisher<T> sink) {
         if (sink == null) {
             logger.warn("Could not find echo sink: clusterKey = {}", getClusterKeyFromContext());
             responseObserver.onError(new StatusException(Status.NOT_FOUND));
             return;
         }
-        sink.success(response);
+        sink.publish(response);
         responseObserver.onNext(Empty.getDefaultInstance());
         responseObserver.onCompleted();
     }
@@ -353,7 +341,8 @@ public class GrpcCommandService extends ProfilerCommandServiceGrpc.ProfilerComma
 
         @Override
         public void onError(Throwable t) {
-            logger.debug("onError", t);
+            Status status = Status.fromThrowable(t);
+            logger.debug("onError:{}", status);
         }
 
         @Override
@@ -362,5 +351,4 @@ public class GrpcCommandService extends ProfilerCommandServiceGrpc.ProfilerComma
         }
 
     }
-
 }

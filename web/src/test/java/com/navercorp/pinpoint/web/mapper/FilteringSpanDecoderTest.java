@@ -164,14 +164,14 @@ public class FilteringSpanDecoderTest {
         }
 
         private static TransactionId createTransactionId() {
-            String agentId = RandomStringUtils.randomAlphanumeric(4, 24);
+            String agentId = RandomStringUtils.insecure().nextAlphanumeric(4, 24);
 
             long boundAgentStartTime = System.currentTimeMillis();
             long originAgentStartTime = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30);
             long agentStartTime = ThreadLocalRandom.current().nextLong(originAgentStartTime, boundAgentStartTime);
 
             int transactionSequence = ThreadLocalRandom.current().nextInt(0, 10);
-            return new TransactionId(agentId, agentStartTime, transactionSequence);
+            return TransactionId.of(agentId, agentStartTime, transactionSequence);
         }
 
         private static long createCollectorAcceptTime() {

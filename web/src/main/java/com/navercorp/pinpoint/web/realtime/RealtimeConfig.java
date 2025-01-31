@@ -15,7 +15,7 @@
  */
 package com.navercorp.pinpoint.web.realtime;
 
-import com.navercorp.pinpoint.common.task.TimerTaskDecoratorFactory;
+import com.navercorp.pinpoint.common.server.task.TaskDecoratorFactory;
 import com.navercorp.pinpoint.web.frontend.export.FrontendConfigExporter;
 import com.navercorp.pinpoint.web.realtime.activethread.count.dao.ActiveThreadCountDao;
 import com.navercorp.pinpoint.web.realtime.activethread.count.service.ActiveThreadCountService;
@@ -26,11 +26,11 @@ import com.navercorp.pinpoint.web.realtime.echo.RedisEchoService;
 import com.navercorp.pinpoint.web.realtime.service.AgentLookupService;
 import com.navercorp.pinpoint.web.security.ServerMapDataFilter;
 import com.navercorp.pinpoint.web.service.ActiveThreadDumpService;
-import com.navercorp.pinpoint.web.service.AgentInfoService;
 import com.navercorp.pinpoint.web.service.AgentService;
+import com.navercorp.pinpoint.web.service.ApplicationAgentListService;
 import com.navercorp.pinpoint.web.service.EchoService;
 import com.navercorp.pinpoint.web.websocket.PinpointWebSocketHandler;
-import com.navercorp.pinpoint.web.websocket.PinpointWebSocketTimerTaskDecoratorFactory;
+import com.navercorp.pinpoint.web.websocket.WebSocketTaskDecoratorFactory;
 import com.navercorp.pinpoint.web.websocket.message.PinpointWebSocketMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -68,8 +68,8 @@ public class RealtimeConfig {
         Duration agentRecentness;
 
         @Bean
-        AgentLookupService agentLookupService(AgentInfoService agentInfoService) {
-            return new AgentLookupServiceImpl(agentInfoService, agentRecentness);
+        AgentLookupService agentLookupService(ApplicationAgentListService applicationAgentListService) {
+            return new AgentLookupServiceImpl(applicationAgentListService, agentRecentness);
         }
 
         @Bean
@@ -87,13 +87,13 @@ public class RealtimeConfig {
                 AgentLookupService agentLookupService,
                 @Qualifier("pubSubATCSessionScheduledExecutor") ScheduledExecutorService scheduledExecutor,
                 ActiveThreadCountService.ATCPeriods atcPeriods,
-                @Autowired(required = false) @Nullable TimerTaskDecoratorFactory timerTaskDecoratorFactory
+                @Autowired(required = false) @Nullable TaskDecoratorFactory taskDecoratorFactory
         ) {
             return new ActiveThreadCountServiceImpl(
                     atcDao,
                     agentLookupService,
-                    Objects.requireNonNullElseGet(timerTaskDecoratorFactory,
-                            PinpointWebSocketTimerTaskDecoratorFactory::new),
+                    Objects.requireNonNullElseGet(taskDecoratorFactory,
+                            WebSocketTaskDecoratorFactory::new),
                     scheduledExecutor,
                     atcPeriods.getPeriodEmit(),
                     atcPeriods.getPeriodUpdate()

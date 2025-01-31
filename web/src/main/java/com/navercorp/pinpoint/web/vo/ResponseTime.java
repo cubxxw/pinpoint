@@ -20,7 +20,11 @@ import com.navercorp.pinpoint.common.trace.ServiceType;
 import com.navercorp.pinpoint.web.applicationmap.histogram.Histogram;
 import com.navercorp.pinpoint.web.applicationmap.histogram.TimeHistogram;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * @author emeroad
@@ -63,8 +67,7 @@ public class ResponseTime {
     private Histogram getHistogram(String agentId) {
         Objects.requireNonNull(agentId, "agentId");
 
-        TimeHistogram histogram = responseHistogramMap.computeIfAbsent(agentId, k -> new TimeHistogram(applicationServiceType, timeStamp));
-        return histogram;
+        return responseHistogramMap.computeIfAbsent(agentId, k -> new TimeHistogram(applicationServiceType, timeStamp));
     }
 
     public void addResponseTime(String agentId, short slotNumber, long count) {
@@ -85,15 +88,17 @@ public class ResponseTime {
         histogram.addCallCountByElapsedTime(elapsedTime, error);
     }
 
+    public Set<String> getAgentIds() {
+        return responseHistogramMap.keySet();
+    }
+
     public Collection<TimeHistogram> getAgentResponseHistogramList() {
         return responseHistogramMap.values();
     }
 
     public Histogram getApplicationResponseHistogram() {
         Histogram result = new Histogram(applicationServiceType);
-        for (Histogram histogram : responseHistogramMap.values()) {
-            result.add(histogram);
-        }
+        result.addAll(responseHistogramMap.values());
         return result;
     }
 
@@ -103,12 +108,10 @@ public class ResponseTime {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("ResponseTime{");
-        sb.append("applicationName='").append(applicationName).append('\'');
-        sb.append(", applicationServiceType=").append(applicationServiceType);
-        sb.append(", timeStamp=").append(timeStamp);
-        sb.append(", responseHistogramMap=").append(responseHistogramMap);
-        sb.append('}');
-        return sb.toString();
+        return "ResponseTime{" + "applicationName='" + applicationName + '\'' +
+                ", applicationServiceType=" + applicationServiceType +
+                ", timeStamp=" + timeStamp +
+                ", responseHistogramMap=" + responseHistogramMap +
+                '}';
     }
 }

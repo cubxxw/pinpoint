@@ -78,15 +78,15 @@ public class MetadataClientMock {
         this.channel = channelFactory.build(host, port);
 
         this.metadataStub = MetadataGrpc.newStub(channel);
-        this.retryScheduler = new RetryScheduler<GeneratedMessageV3, PResult>() {
+        this.retryScheduler = new RetryScheduler<>() {
             @Override
             public boolean isSuccess(PResult response) {
                 return response.getSuccess();
             }
 
             @Override
-            public void scheduleNextRetry(GeneratedMessageV3 request, int remainingRetryCount) {
-                MetadataClientMock.this.scheduleNextRetry(request, remainingRetryCount);
+            public void scheduleNextRetry(GeneratedMessageV3 request, int retryCount) {
+                MetadataClientMock.this.scheduleNextRetry(request, retryCount);
             }
         };
     }
@@ -157,16 +157,13 @@ public class MetadataClientMock {
             return;
         }
 
-        if (message instanceof PSqlMetaData) {
-            PSqlMetaData sqlMetaData = (PSqlMetaData) message;
+        if (message instanceof PSqlMetaData sqlMetaData) {
             StreamObserver<PResult> responseObserver = newResponseObserver(message, retryCount);
             this.metadataStub.requestSqlMetaData(sqlMetaData, responseObserver);
-        } else if (message instanceof PApiMetaData) {
-            final PApiMetaData apiMetaData = (PApiMetaData) message;
+        } else if (message instanceof PApiMetaData apiMetaData) {
             StreamObserver<PResult> responseObserver = newResponseObserver(message, retryCount);
             this.metadataStub.requestApiMetaData(apiMetaData, responseObserver);
-        } else if (message instanceof PStringMetaData) {
-            final PStringMetaData stringMetaData = (PStringMetaData) message;
+        } else if (message instanceof PStringMetaData stringMetaData) {
             StreamObserver<PResult> responseObserver = newResponseObserver(message, retryCount);
             this.metadataStub.requestStringMetaData(stringMetaData, responseObserver);
         } else {

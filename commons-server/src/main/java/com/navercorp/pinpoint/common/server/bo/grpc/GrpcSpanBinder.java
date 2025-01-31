@@ -26,6 +26,7 @@ import com.navercorp.pinpoint.common.server.bo.SpanBo;
 import com.navercorp.pinpoint.common.server.bo.SpanChunkBo;
 import com.navercorp.pinpoint.common.server.bo.SpanEventBo;
 import com.navercorp.pinpoint.common.server.bo.SpanEventComparator;
+import com.navercorp.pinpoint.common.util.IdValidateUtils;
 import com.navercorp.pinpoint.common.util.StringUtils;
 import com.navercorp.pinpoint.grpc.MessageFormatUtils;
 import com.navercorp.pinpoint.grpc.trace.PAcceptEvent;
@@ -133,10 +134,15 @@ public class GrpcSpanBinder {
                 }
 
                 final String parentApplicationName = parentInfo.getParentApplicationName();
+                // If root node, parentApplicationName is null
                 if (StringUtils.hasLength(parentApplicationName)) {
+                    if (!IdValidateUtils.validateId(parentApplicationName)) {
+                        throw new IllegalArgumentException("Invalid parentApplicationName " + parentApplicationName
+                                + " agent:" + attribute.getApplicationName() + "/" + attribute.getAgentId());
+                    }
                     spanBo.setParentApplicationId(parentApplicationName);
+                    spanBo.setParentApplicationServiceType((short) parentInfo.getParentApplicationType());
                 }
-                spanBo.setParentApplicationServiceType((short) parentInfo.getParentApplicationType());
             }
         }
 
@@ -153,6 +159,7 @@ public class GrpcSpanBinder {
         return spanBo;
     }
 
+
     private String getExceptionMessage(PIntStringValue exceptionInfo) {
         if (exceptionInfo.hasStringValue()) {
             return exceptionInfo.getStringValue().getValue();
@@ -165,13 +172,8 @@ public class GrpcSpanBinder {
 
         spanEvent.setSequence((short) pSpanEvent.getSequence());
 
-        if (prevSpanEvent == null) {
-            int startElapsed = pSpanEvent.getStartElapsed();
-            spanEvent.setStartElapsed(startElapsed);
-        } else {
-            int startElapsed = pSpanEvent.getStartElapsed() + prevSpanEvent.getStartElapsed();
-            spanEvent.setStartElapsed(startElapsed);
-        }
+        int startTime = getStartTimeDelta(pSpanEvent, prevSpanEvent);
+        spanEvent.setStartElapsed(startTime);
         spanEvent.setEndElapsed(pSpanEvent.getEndElapsed());
 
         spanEvent.setServiceType((short) pSpanEvent.getServiceType());
@@ -179,18 +181,8 @@ public class GrpcSpanBinder {
         spanEvent.setApiId(pSpanEvent.getApiId());
 
         // v2 spec
-        final int depth = pSpanEvent.getDepth();
-        if (depth == 0) {
-            // depth compact case
-            if (prevSpanEvent == null) {
-                // first spanEvent
-                spanEvent.setDepth(0);
-            } else {
-                spanEvent.setDepth(prevSpanEvent.getDepth());
-            }
-        } else {
-            spanEvent.setDepth(depth);
-        }
+        int depth = getDepthDelta(pSpanEvent, prevSpanEvent);
+        spanEvent.setDepth(depth);
 
         if (pSpanEvent.hasNextEvent()) {
             final PNextEvent nextEvent = pSpanEvent.getNextEvent();
@@ -222,6 +214,29 @@ public class GrpcSpanBinder {
         if (pSpanEvent.hasExceptionInfo()) {
             final PIntStringValue exceptionInfo = pSpanEvent.getExceptionInfo();
             spanEvent.setExceptionInfo(exceptionInfo.getIntValue(), getExceptionMessage(exceptionInfo));
+        }
+    }
+
+    private int getDepthDelta(PSpanEvent pSpanEvent, SpanEventBo prevSpanEvent) {
+        final int depth = pSpanEvent.getDepth();
+        if (depth == 0) {
+            // depth compact case
+            if (prevSpanEvent == null) {
+                // first spanEvent
+                return 0;
+            } else {
+                return prevSpanEvent.getDepth();
+            }
+        } else {
+            return depth;
+        }
+    }
+
+    private int getStartTimeDelta(PSpanEvent pSpanEvent, SpanEventBo prevSpanEvent) {
+        if (prevSpanEvent == null) {
+            return pSpanEvent.getStartElapsed();
+        } else {
+            return pSpanEvent.getStartElapsed() + prevSpanEvent.getStartElapsed();
         }
     }
 
@@ -269,9 +284,9 @@ public class GrpcSpanBinder {
     private TransactionId newTransactionId(PTransactionId pTransactionId, String spanAgentId) {
         final String transactionAgentId = pTransactionId.getAgentId();
         if (StringUtils.hasLength(transactionAgentId)) {
-            return new TransactionId(transactionAgentId, pTransactionId.getAgentStartTime(), pTransactionId.getSequence());
+            return TransactionId.of(transactionAgentId, pTransactionId.getAgentStartTime(), pTransactionId.getSequence());
         } else {
-            return new TransactionId(spanAgentId, pTransactionId.getAgentStartTime(), pTransactionId.getSequence());
+            return TransactionId.of(spanAgentId, pTransactionId.getAgentStartTime(), pTransactionId.getSequence());
         }
     }
 

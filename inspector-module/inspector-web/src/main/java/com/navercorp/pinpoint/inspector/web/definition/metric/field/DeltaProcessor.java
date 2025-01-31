@@ -16,7 +16,7 @@
 
 package com.navercorp.pinpoint.inspector.web.definition.metric.field;
 
-import com.navercorp.pinpoint.metric.web.model.chart.SystemMetricPoint;
+import com.navercorp.pinpoint.metric.common.model.chart.SystemMetricPoint;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -30,7 +30,7 @@ public class DeltaProcessor implements FieldPostProcessor {
 
     @Override
     public List<SystemMetricPoint<Double>> postProcess(List<SystemMetricPoint<Double>> systemMetricPointList) {
-        if (systemMetricPointList.size() == 0) {
+        if (systemMetricPointList.isEmpty()) {
             return systemMetricPointList;
         }
 

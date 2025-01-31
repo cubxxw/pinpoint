@@ -23,6 +23,7 @@ import com.navercorp.pinpoint.common.hbase.HbaseSecurityProvider;
 import com.navercorp.pinpoint.common.hbase.SimpleHbaseSecurityProvider;
 import com.navercorp.pinpoint.common.hbase.TableNameProvider;
 import com.navercorp.pinpoint.common.hbase.async.AsyncConnectionFactoryBean;
+import com.navercorp.pinpoint.common.hbase.config.AsyncWarmup;
 import com.navercorp.pinpoint.common.hbase.config.Warmup;
 import com.navercorp.pinpoint.common.server.executor.ExecutorCustomizer;
 import com.navercorp.pinpoint.common.server.executor.ExecutorProperties;
@@ -91,9 +92,10 @@ public class HbaseClientConfiguration {
     }
 
     @Bean
-    public FactoryBean<AsyncConnection> hbaseAsyncConnectionFactory(Configuration configuration, User user) {
+    public FactoryBean<AsyncConnection> hbaseAsyncConnection(Configuration configuration, User user) {
         return new AsyncConnectionFactoryBean(configuration, user);
     }
+
 
     @Bean
     public ExecutorCustomizer<ThreadPoolExecutorFactoryBean> hbaseExecutorCustomizer() {
@@ -125,5 +127,11 @@ public class HbaseClientConfiguration {
     @ConditionalOnProperty(name = "hbase.client.warmup.enable", havingValue = "true")
     public Consumer<Connection> hbaseConnectionWarmup(TableNameProvider tableNameProvider) {
         return new Warmup(tableNameProvider);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "hbase.client.warmup.enable", havingValue = "true")
+    public Consumer<AsyncConnection> hbaseAsyncConnectionWarmup(TableNameProvider tableNameProvider) {
+        return new AsyncWarmup(tableNameProvider);
     }
 }

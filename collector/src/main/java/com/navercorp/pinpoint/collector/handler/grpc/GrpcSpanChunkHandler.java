@@ -3,7 +3,12 @@ package com.navercorp.pinpoint.collector.handler.grpc;
 
 import com.google.protobuf.GeneratedMessageV3;
 import com.navercorp.pinpoint.collector.handler.SimpleHandler;
+import com.navercorp.pinpoint.collector.sampler.Sampler;
+import com.navercorp.pinpoint.collector.sampler.SpanSamplerFactory;
 import com.navercorp.pinpoint.collector.service.TraceService;
+import com.navercorp.pinpoint.common.hbase.RequestNotPermittedException;
+import com.navercorp.pinpoint.common.profiler.logging.LogSampler;
+import com.navercorp.pinpoint.common.server.bo.BasicSpan;
 import com.navercorp.pinpoint.common.server.bo.SpanChunkBo;
 import com.navercorp.pinpoint.common.server.bo.grpc.BindAttribute;
 import com.navercorp.pinpoint.common.server.bo.grpc.GrpcSpanFactory;
@@ -32,6 +37,8 @@ import java.util.Objects;
 public class GrpcSpanChunkHandler implements SimpleHandler<GeneratedMessageV3> {
 
     private final Logger logger = LogManager.getLogger(getClass());
+    private final LogSampler infoLog = new LogSampler(1000);
+    private final LogSampler warnLog = new LogSampler(100);
     private final boolean isDebug = logger.isDebugEnabled();
 
     private final TraceService[] traceServices;
@@ -40,10 +47,13 @@ public class GrpcSpanChunkHandler implements SimpleHandler<GeneratedMessageV3> {
 
     private final AcceptedTimeService acceptedTimeService;
 
-    public GrpcSpanChunkHandler(TraceService[] traceServices, GrpcSpanFactory spanFactory, AcceptedTimeService acceptedTimeService) {
+    private final Sampler<BasicSpan> sampler;
+
+    public GrpcSpanChunkHandler(TraceService[] traceServices, GrpcSpanFactory spanFactory, AcceptedTimeService acceptedTimeService, SpanSamplerFactory spanSamplerFactory) {
         this.traceServices = Objects.requireNonNull(traceServices, "traceServices");
         this.spanFactory = Objects.requireNonNull(spanFactory, "spanFactory");
         this.acceptedTimeService = Objects.requireNonNull(acceptedTimeService, "acceptedTimeService");
+        this.sampler = spanSamplerFactory.createBasicSpanSampler();
 
         logger.info("TraceServices {}", Arrays.toString(traceServices));
     }
@@ -51,8 +61,8 @@ public class GrpcSpanChunkHandler implements SimpleHandler<GeneratedMessageV3> {
     @Override
     public void handleSimple(ServerRequest<GeneratedMessageV3> serverRequest) {
         final GeneratedMessageV3 data = serverRequest.getData();
-        if (data instanceof PSpanChunk) {
-            handleSpanChunk((PSpanChunk) data);
+        if (data instanceof PSpanChunk spanChunk) {
+            handleSpanChunk(spanChunk);
         } else {
             logger.warn("Invalid request type. serverRequest={}", serverRequest);
             throw Status.INTERNAL.withDescription("Bad Request(invalid request type)").asRuntimeException();
@@ -69,11 +79,25 @@ public class GrpcSpanChunkHandler implements SimpleHandler<GeneratedMessageV3> {
         final Header header = ServerContext.getAgentInfo();
         final BindAttribute attribute = BindAttribute.of(header, acceptedTimeService.getAcceptedTime());
         final SpanChunkBo spanChunkBo = spanFactory.buildSpanChunkBo(spanChunk, attribute);
+        if (!sampler.isSampling(spanChunkBo)) {
+            if (isDebug) {
+                logger.debug("unsampled PSpanChunk={}", createSimpleSpanChunkLog(spanChunk));
+            } else {
+                infoLog.log(() -> {
+                    if (logger.isInfoEnabled()) {
+                        logger.info("unsampled PSpanChunk={}", createSimpleSpanChunkLog(spanChunk));
+                    }
+                });
+            }
+            return;
+        }
         for (TraceService traceService : traceServices) {
             try {
                 traceService.insertSpanChunk(spanChunkBo);
-            } catch (Exception e) {
-                logger.warn("Failed to handle spanChunk={}", MessageFormatUtils.debugLog(spanChunk), e);
+            } catch (RequestNotPermittedException notPermitted) {
+                warnLog.log(c -> logger.warn("Failed to handle SpanChunk RequestNotPermitted:{} {}", notPermitted.getMessage(), c));
+            } catch (Throwable e) {
+                logger.warn("Failed to handle SpanChunk={}", MessageFormatUtils.debugLog(spanChunk), e);
             }
         }
     }

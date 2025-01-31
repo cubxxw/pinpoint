@@ -5,16 +5,16 @@
 [![Maven](https://img.shields.io/github/actions/workflow/status/pinpoint-apm/pinpoint/maven.yml?branch=master&label=build&logo=github)](https://github.com/pinpoint-apm/pinpoint/actions?query=workflow%3AMaven)
 [![codecov](https://codecov.io/gh/pinpoint-apm/pinpoint/branch/master/graph/badge.svg)](https://codecov.io/gh/pinpoint-apm/pinpoint)
 
-## Latest Release (2023/10/10)
+## Latest Release (2024/10/23)
 
-We're happy to announce the release of Pinpoint v2.5.3.
-Please check the release note at (https://github.com/pinpoint-apm/pinpoint/releases/tag/v2.5.3).
+We're happy to announce the release of Pinpoint v3.0.1.
+Please check the release note at (https://github.com/pinpoint-apm/pinpoint/releases/tag/v3.0.1).
 
-The current stable version is [v2.5.3](https://github.com/pinpoint-apm/pinpoint/releases/tag/v2.5.3).
+The current stable version is [v3.0.1](https://github.com/pinpoint-apm/pinpoint/releases/tag/v3.0.1).
 
 ## Live Demo
 
-Take a quick look at Pinpoint with our [demo](http://125.209.240.10:10123/main/ApiGateway@SPRING_BOOT/5m?inbound=1&outbound=4&wasOnly=false&bidirectional=false)!
+Take a quick look at Pinpoint with our [demo](http://223.130.142.103:8080/main/ApiGateway@SPRING_BOOT/5m?inbound=1&outbound=4&wasOnly=false&bidirectional=false)!
 
 ## PHP, PYTHON
 
@@ -62,26 +62,30 @@ For a more intimate guide, please check out our *[Introduction to Pinpoint](http
 * **Infrastructure**
   ![Infrastructure](doc/images/ss-Infrastructure-metric.png)
 
+* **Error-Analysis**
+  ![Error-Analysis 1](doc/images/ss_error-analysis1.png)
+  ![Error-Analysis 2](doc/images/ss_error-analysis3.gif)
+
 ## Supported Modules
 * JDK 8+
-* [Tomcat](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/tomcat), [Jetty](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/jetty), [JBoss EAP](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/jboss), [Resin](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/resin), [Websphere](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/websphere), [Vertx](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/vertx), [Weblogic](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/weblogic), [Undertow](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/undertow), [Akka HTTP](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/akka-http)
-* [Spring](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/spring), [Spring Boot](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/spring-boot) ([Embedded Tomcat](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/tomcat), [Jetty](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/jetty), [Undertow](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/undertow), [Reactor Netty](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/reactor-netty)), [Spring WebFlux](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/spring-webflux)
-* Apache HttpClient [3](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/httpclient3) / [4](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/httpclient4) / [5](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/httpclient5), [JDK HttpConnector](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/jdk-http), [GoogleHttpClient](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/google-httpclient), [OkHttpClient](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/okhttp), [NingAsyncHttpClient](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/ning-asynchttpclient)
-* [Thrift](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/thrift), [DUBBO](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/dubbo), [GRPC](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/grpc), [Apache CXF](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/cxf)
-* [ActiveMQ](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/activemq-client), [RabbitMQ](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/rabbitmq), [Kafka](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/kafka), [RocketMQ](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/rabbitmq), [Paho MQTT](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/paho-mqtt)
-* [MySQL](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/mysql-jdbc), [Oracle](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/oracle-jdbc), [MSSQL](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/mssql-jdbc), [JTDS](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/jtds), [CUBRID](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/cubrid-jdbc), [POSTGRESQL](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/postgresql-jdbc), [MARIA](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/mariadb-jdbc), [Informix](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/informix-jdbc), [Spring Data R2DBC](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/spring-data-r2dbc)
-* [Arcus](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/arcus), [Memcached](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/arcus), Redis([Jedis](https://github.com/pinpoint-apm/pinpoint/blob/master/plugins/redis), [Lettuce](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/redis-lettuce), [Redisson](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/redis-redisson)), [CASSANDRA](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/cassandra), [MongoDB](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/mongodb), [Hbase](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/hbase), [Elasticsearch](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/elasticsearch)
-* [iBATIS](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/ibatis), [MyBatis](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/mybatis)
-* [DBCP](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/dbcp), [DBCP2](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/dbcp2), [HIKARICP](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/hikaricp), [DRUID](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/druid)
-* [Gson](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/gson), [Jackson](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/jackson), [Json Lib](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/json-lib), [Fastjson](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/fastjson)
-* [log4j](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/log4j), [Logback](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/logback), [log4j2](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/log4j2)
-* [OpenWhisk](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/openwhisk), [Kotlin Coroutines](https://github.com/pinpoint-apm/pinpoint/tree/master/plugins/kotlin-coroutines)
+* [Tomcat](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/tomcat), [Jetty](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/jetty), [JBoss EAP](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/jboss), [Resin](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/resin), [Websphere](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/websphere), [Vertx](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/vertx), [Weblogic](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/weblogic), [Undertow](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/undertow), [Akka HTTP](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/akka-http)
+* [Spring](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/spring), [Spring Boot](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/spring-boot) ([Embedded Tomcat](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/tomcat), [Jetty](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/jetty), [Undertow](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/undertow), [Reactor Netty](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/reactor-netty)), [Spring WebFlux](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/spring-webflux)
+* Apache HttpClient [3](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/httpclient3) / [4](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/httpclient4) / [5](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/httpclient5), [JDK HttpConnector](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/jdk-http), [GoogleHttpClient](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/google-httpclient), [OkHttpClient](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/okhttp), [NingAsyncHttpClient](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/ning-asynchttpclient)
+* [Thrift](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/thrift), [DUBBO](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/dubbo), [GRPC](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/grpc), [Apache CXF](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/cxf)
+* [ActiveMQ](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/activemq-client), [RabbitMQ](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/rabbitmq), [Kafka](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/kafka), [RocketMQ](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/rabbitmq), [Paho MQTT](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/paho-mqtt)
+* [MySQL](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/mysql-jdbc), [Oracle](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/oracle-jdbc), [MSSQL](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/mssql-jdbc), [JTDS](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/jtds), [CUBRID](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/cubrid-jdbc), [POSTGRESQL](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/postgresql-jdbc), [MARIA](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/mariadb-jdbc), [Informix](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/informix-jdbc), [Spring Data R2DBC](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/spring-data-r2dbc)
+* [Arcus](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/arcus), [Memcached](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/arcus), Redis([Jedis](https://github.com/pinpoint-apm/pinpoint/blob/master/agent-module/plugins/redis), [Lettuce](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/redis-lettuce), [Redisson](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/redis-redisson)), [CASSANDRA](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/cassandra), [MongoDB](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/mongodb), [Hbase](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/hbase), [Elasticsearch](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/elasticsearch)
+* [iBATIS](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/ibatis), [MyBatis](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/mybatis)
+* [DBCP](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/dbcp), [DBCP2](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/dbcp2), [HIKARICP](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/hikaricp), [DRUID](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/druid)
+* [Gson](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/gson), [Jackson](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/jackson), [Json Lib](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/json-lib), [Fastjson](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/fastjson)
+* [log4j](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/log4j), [Logback](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/logback), [log4j2](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/log4j2)
+* [OpenWhisk](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/openwhisk), [Kotlin Coroutines](https://github.com/pinpoint-apm/pinpoint/tree/master/agent-module/plugins/kotlin-coroutines)
 
 ## Compatibility
 
 Java version required to run Pinpoint:
 <!-- <compatibilityJava.md> -->
-| Pinpoint Version | Agent | Collector | Web | Flink |
+| Pinpoint Version | Agent | Collector | Web | Batch | 
 |------------------|-------|-----------|-----|-------|
 | 2.0.x            | 6-13  | 8         | 8   | 8     |
 | 2.1.x            | 6-14  | 8         | 8   | 8     |
@@ -90,58 +94,41 @@ Java version required to run Pinpoint:
 | 2.4.x            | 7-18  | 11        | 11  | 11    |
 | 2.5.x            | 8-19  | 11        | 11  | 11    |
 | 3.0.x            | 8-21  | 17        | 17  | 17    |
+| 3.1.x            | 8-21  | 17        | 17  | 17    |
 
 <!-- </compatibilityJava.md> -->
 HBase compatibility table:
 <!-- <compatibilityHbase.md> -->
 | Pinpoint Version | HBase 1.x | HBase 2.x                                                                                                             |
 |------------------|-----------|-----------------------------------------------------------------------------------------------------------------------|
-| 2.0.x            | yes       | [optional](https://pinpoint-apm.gitbook.io/pinpoint/documents/hbase-upgrade#do-you-like-to-use-hbase-2x-for-pinpoint) |
-| 2.1.x            | yes       | [optional](https://pinpoint-apm.gitbook.io/pinpoint/documents/hbase-upgrade#do-you-like-to-use-hbase-2x-for-pinpoint) |
-| 2.2.x            | yes       | [optional](https://pinpoint-apm.gitbook.io/pinpoint/documents/hbase-upgrade#do-you-like-to-use-hbase-2x-for-pinpoint) |
-| 2.3.x            | yes       | [hbase2-module](https://github.com/pinpoint-apm/pinpoint/tree/2.3.x/hbase2-module)                                    |
-| 2.4.x            | yes       | [hbase2-module](https://github.com/pinpoint-apm/pinpoint/tree/2.4.x/hbase2-module)                                    |
-| 2.5.x            | yes       | [hbase2-module](https://github.com/pinpoint-apm/pinpoint/tree/2.5.x/hbase2-module)                                    |
-| 3.0.x            | no         | yes                                    |
+| 2.0.x - 2.2.x    | yes       | [optional](https://pinpoint-apm.gitbook.io/pinpoint/documents/hbase-upgrade#do-you-like-to-use-hbase-2x-for-pinpoint) |
+| 2.3.x - 2.5.x    | yes       | [hbase2-module](https://github.com/pinpoint-apm/pinpoint/tree/2.3.x/hbase2-module)                                    |
+| 3.0.x            | no        | yes                                                                                                                   |
+| 3.1.x            | no        | yes                                                                                                                   |
 
 <!-- </compatibilityHbase.md> -->
 Agent - Collector compatibility table:
 <!-- <compatibilityPinpoint.md> -->
-| Agent Version | Collector 2.0.x | Collector 2.1.x | Collector 2.2.x | Collector 2.3.x | Collector 2.4.x | Collector 2.5.x | Collector 3.0.x |
-|---------------|-----------------|-----------------|-----------------|-----------------|-----------------|-----------------|-----------------|
-| 2.0.x         | yes             | yes             | yes             | yes             | yes             | yes             | yes             |
-| 2.1.x         | no              | yes             | yes             | yes             | yes             | yes             | yes             |
-| 2.2.x         | no              | no              | yes             | yes             | yes             | yes             | yes             |
-| 2.3.x         | no              | no              | no              | yes             | yes             | yes             | yes             |
-| 2.4.x         | no              | no              | no              | no              | yes             | yes             | yes             |
-| 2.5.x         | no              | no              | no              | no              | no              | yes             | yes             |
-| 3.0.x         | no              | no              | no              | no              | no              | no              | yes             |
+
+| Agent Version | Collector 2.x.x | Collector 3.0.x | Collector 3.1.x |
+|---------------|-----------------|-----------------|-----------------|
+| 2.x.x         | yes             | yes             | yes             |
+| 3.0.x         | no              | yes             | yes             |
+| 3.1.x         | no              | no              | yes             |
 
 <!-- </compatibilityPinpoint.md> -->
-Flink compatibility table:
-<!-- <compatibilityFlink.md> -->
-| Pinpoint Version | Flink 1.3.X | Flink 1.4.X | Flink 1.5.X | Flink 1.6.X | Flink 1.7.X | Flink 1.14.X | Flink 1.18.X |
-|------------------|-------------|-------------|-------------|-------------|-------------|--------------|--------------|
-| 2.0.x            | yes         | yes         | yes         | yes         | yes         | no           |no            |
-| 2.1.x            | yes         | yes         | yes         | yes         | yes         | no           |no            |
-| 2.2.x            | yes         | yes         | yes         | yes         | yes         | no           |no            |
-| 2.3.x            | yes         | yes         | yes         | yes         | yes         | no           |no            |
-| 2.4.x            | yes         | yes         | yes         | yes         | yes         | yes          |no            |
-| 2.5.x            | yes         | yes         | yes         | yes         | yes         | yes          |no            |
-| 3.0.x            | no          | no          | no          | no          | no          | no           |yes           |
-<!-- </compatibilityFlink.md> -->
 Pinot compatibility table:
 <!-- <compatibilityPinot.md> -->
-| Pinpoint Version | Pinot 0.11.0 | Pinot 0.12.0 | Pinot 1.0.0    |
-|------------------|--------------|--------------|----------------|
-| 2.5.x            | yes          | yes          | yes            |
-| 3.0.x            | no           | no           | yes            | 
+| Pinpoint Version | Pinot 0.11.0 | Pinot 0.12.0 | Pinot 1.0.0 | [Pinot 1.2.0](https://github.com/pinpoint-apm/pinpoint/issues/11613) |
+|------------------|--------------|--------------|-------------|----------------------------------------------------------------------|
+| 2.5.x            | yes          | yes          | yes         | yes                                                                  |
+| 3.0.x            | no           | no           | yes         | yes                                                                  |
+| 3.1.x            | no           | no           | no          | yes                                                                  |
 <!-- </compatibilityPinot.md> -->
 
 ## Community
 
-[Github issues](https://github.com/pinpoint-apm/pinpoint/issues)  
-[Google group](https://groups.google.com/forum/#!forum/pinpoint_user)  
+[Github issues](https://github.com/pinpoint-apm/pinpoint/issues)   
 [Gitter](https://gitter.im/naver/pinpoint)  
 
 We have Chinese community now, welcome to join!

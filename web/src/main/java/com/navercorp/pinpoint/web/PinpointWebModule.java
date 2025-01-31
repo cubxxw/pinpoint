@@ -1,8 +1,8 @@
 package com.navercorp.pinpoint.web;
 
 import com.navercorp.pinpoint.common.server.CommonsServerConfiguration;
-import com.navercorp.pinpoint.common.server.cluster.zookeeper.config.ClusterConfigurationFactory;
 import com.navercorp.pinpoint.common.server.profile.StandardEnvironmentLogger;
+import com.navercorp.pinpoint.common.server.util.time.RangeValidatorConfiguration;
 import com.navercorp.pinpoint.datasource.MainDataSourceConfiguration;
 import com.navercorp.pinpoint.web.applicationmap.config.ApplicationMapModule;
 import com.navercorp.pinpoint.web.cache.CacheConfiguration;
@@ -10,7 +10,6 @@ import com.navercorp.pinpoint.web.component.config.ComponentConfiguration;
 import com.navercorp.pinpoint.web.config.ConfigProperties;
 import com.navercorp.pinpoint.web.config.LogProperties;
 import com.navercorp.pinpoint.web.config.ScatterChartProperties;
-import com.navercorp.pinpoint.web.config.WebClusterProperties;
 import com.navercorp.pinpoint.web.config.WebMysqlDaoConfiguration;
 import com.navercorp.pinpoint.web.frontend.FrontendConfigExportConfiguration;
 import com.navercorp.pinpoint.web.install.InstallModule;
@@ -28,6 +27,7 @@ import org.springframework.core.env.StandardEnvironment;
         WebAppPropertySources.class,
         CommonsServerConfiguration.class,
         ComponentConfiguration.class,
+        RangeValidatorConfiguration.class,
 
         WebServerConfig.class,
         WebMvcConfig.class,
@@ -36,7 +36,6 @@ import org.springframework.core.env.StandardEnvironment;
         RealtimeConfig.class,
         MainDataSourceConfiguration.class,
 
-        ClusterConfigurationFactory.class,
         CacheConfiguration.class,
 
         ApplicationMapModule.class,
@@ -60,10 +59,6 @@ import org.springframework.core.env.StandardEnvironment;
         "com.navercorp.pinpoint.web.util"
 })
 public class PinpointWebModule {
-    @Bean
-    public WebClusterProperties webClusterProperties() {
-        return new WebClusterProperties();
-    }
 
     @Bean
     public ConfigProperties configProperties() {

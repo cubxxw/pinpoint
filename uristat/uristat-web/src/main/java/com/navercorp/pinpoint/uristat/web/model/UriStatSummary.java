@@ -16,62 +16,83 @@
 
 package com.navercorp.pinpoint.uristat.web.model;
 
-import com.navercorp.pinpoint.common.util.MathUtils;
+import java.util.List;
 
 public class UriStatSummary {
-    private final String uri;
-    private final double totalCount;
-    private final double failureCount;
-    private final double maxTimeMs;
-    private final double avgTimeMs;
-    private final double apdex;
-    private final String version;
+    private String uri;
+    private Double totalCount;
+    private Double failureCount;
+    private Double maxTimeMs;
+    private Double avgTimeMs;
+    private Double apdex;
+    private String version;
 
-    public UriStatSummary(String uri, double apdexRaw, double totalCount, double failureCount, double maxTimeMs, double totalTimeMs, String version) {
-        this.uri = uri;
-        this.apdex = MathUtils.average(apdexRaw, totalCount);
-        this.totalCount = totalCount;
-        this.failureCount = failureCount;
-        this.maxTimeMs = maxTimeMs;
-        this.avgTimeMs = MathUtils.average(totalTimeMs, totalCount);
-        this.version = version;
+    private List<UriStatChartValue> chartValue;
+
+    public UriStatSummary() {
     }
 
-    @Deprecated
-    public UriStatSummary(String uri, double totalCount, double failureCount, double maxTimeMs, double totalTimeMs, String version) {
-        this.uri = uri;
-        this.apdex = 0;
-        this.totalCount = totalCount;
-        this.failureCount = failureCount;
-        this.maxTimeMs = maxTimeMs;
-        this.avgTimeMs = MathUtils.average(totalTimeMs, totalCount);
-        this.version = version;
-    }
     public String getUri() {
         return uri;
     }
 
-    public double getApdex() {
-        return apdex;
+    public void setUri(String uri) {
+        this.uri = uri;
     }
 
-    public double getTotalCount() {
+    public Double getTotalCount() {
         return totalCount;
     }
 
-    public double getFailureCount() {
+    public void setTotalCount(Double totalCount) {
+        this.totalCount = totalCount;
+    }
+
+    public Double getFailureCount() {
         return failureCount;
     }
 
-    public double getMaxTimeMs() {
+    public void setFailureCount(Double failureCount) {
+        this.failureCount = failureCount;
+    }
+
+    public Double getMaxTimeMs() {
         return maxTimeMs;
     }
 
-    public double getAvgTimeMs() {
+    public void setMaxTimeMs(Double maxTimeMs) {
+        this.maxTimeMs = maxTimeMs;
+    }
+
+    public Double getAvgTimeMs() {
         return avgTimeMs;
+    }
+
+    public void setAvgTimeMs(Double avgTimeMs) {
+        this.avgTimeMs = avgTimeMs;
+    }
+
+    public Double getApdex() {
+        return apdex;
+    }
+
+    public void setApdex(Double apdex) {
+        this.apdex = apdex;
     }
 
     public String getVersion() {
         return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public List<UriStatChartValue> getChartValue() {
+        return chartValue;
+    }
+
+    public void setChartValue(List<UriStatChartValue> chartValue) {
+        this.chartValue = chartValue;
     }
 }

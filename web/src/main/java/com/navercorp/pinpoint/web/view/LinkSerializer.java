@@ -17,16 +17,17 @@
 package com.navercorp.pinpoint.web.view;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.navercorp.pinpoint.common.server.util.json.JsonFields;
 import com.navercorp.pinpoint.web.applicationmap.histogram.Histogram;
 import com.navercorp.pinpoint.web.applicationmap.link.Link;
-import com.navercorp.pinpoint.web.applicationmap.link.LinkType;
+import com.navercorp.pinpoint.web.applicationmap.link.LinkViews;
 import com.navercorp.pinpoint.web.applicationmap.nodes.Node;
 import com.navercorp.pinpoint.web.applicationmap.nodes.ServerGroupList;
 import com.navercorp.pinpoint.web.applicationmap.rawdata.AgentHistogram;
 import com.navercorp.pinpoint.web.applicationmap.rawdata.AgentHistogramList;
+import com.navercorp.pinpoint.web.view.id.AgentNameView;
 import com.navercorp.pinpoint.web.vo.Application;
 import com.navercorp.pinpoint.web.vo.ResponseTimeStatics;
 
@@ -43,7 +44,7 @@ import java.util.Map;
 public class LinkSerializer extends JsonSerializer<Link> {
 
     @Override
-    public void serialize(Link link, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonProcessingException {
+    public void serialize(Link link, JsonGenerator jgen, SerializerProvider provider) throws IOException {
         jgen.writeStartObject();
 
         jgen.writeObjectField("key", link.getLinkName());  // for servermap
@@ -80,14 +81,14 @@ public class LinkSerializer extends JsonSerializer<Link> {
 
 
         jgen.writeObjectField("histogram", histogram);
-
+        final Class<?> activeView = LinkViews.getActiveView(provider);
         //time histogram
-        if (LinkType.SIMPLIFIED != link.getLinkType()){
+        if (!LinkViews.Simplified.inView(activeView)){
             writeTimeSeriesHistogram(link, jgen);
         }
 
         //agent histogram
-        if (LinkType.DETAILED == link.getLinkType()) {
+        if (LinkViews.Detailed.inView(activeView)) {
             // data showing how agents call each of their respective links
             writeAgentHistogram("sourceHistogram", link.getSourceList(), jgen);
             writeAgentHistogram("targetHistogram", link.getTargetList(), jgen);
@@ -173,8 +174,9 @@ public class LinkSerializer extends JsonSerializer<Link> {
     }
 
     private void writeSourceAgentTimeSeriesHistogram(Link link, JsonGenerator jgen) throws IOException {
-        AgentResponseTimeViewModelList sourceAgentTimeSeriesHistogram = link.getSourceAgentTimeSeriesHistogram();
-        sourceAgentTimeSeriesHistogram.setFieldName("sourceTimeSeriesHistogram");
+        JsonFields<AgentNameView, List<TimeViewModel>> sourceAgentTimeSeriesHistogram = link.getSourceAgentTimeSeriesHistogram();
+//        sourceAgentTimeSeriesHistogram.setFieldName("sourceTimeSeriesHistogram");
+        jgen.writeFieldName("sourceTimeSeriesHistogram");
         jgen.writeObject(sourceAgentTimeSeriesHistogram);
     }
 

@@ -17,14 +17,18 @@
 
 package com.navercorp.pinpoint.web.applicationmap.controller;
 
+import com.fasterxml.jackson.annotation.JsonView;
 import com.navercorp.pinpoint.common.profiler.util.TransactionId;
 import com.navercorp.pinpoint.common.server.bo.SpanBo;
 import com.navercorp.pinpoint.common.server.util.DateTimeFormatUtils;
 import com.navercorp.pinpoint.common.server.util.time.Range;
 import com.navercorp.pinpoint.loader.service.ServiceTypeRegistryService;
 import com.navercorp.pinpoint.web.applicationmap.ApplicationMap;
+import com.navercorp.pinpoint.web.applicationmap.FilterMapWithScatter;
 import com.navercorp.pinpoint.web.applicationmap.FilterMapWrap;
 import com.navercorp.pinpoint.web.applicationmap.histogram.TimeHistogramFormat;
+import com.navercorp.pinpoint.web.applicationmap.map.MapViews;
+import com.navercorp.pinpoint.web.applicationmap.nodes.NodeViews;
 import com.navercorp.pinpoint.web.applicationmap.service.FilteredMapService;
 import com.navercorp.pinpoint.web.applicationmap.service.FilteredMapServiceOption;
 import com.navercorp.pinpoint.web.filter.Filter;
@@ -39,6 +43,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -51,6 +56,7 @@ import java.util.Objects;
  * @author jaehong.kim
  */
 @RestController
+@RequestMapping("/api")
 @Validated
 public class FilteredMapController {
     private final Logger logger = LogManager.getLogger(this.getClass());
@@ -70,6 +76,7 @@ public class FilteredMapController {
     }
 
     @GetMapping(value = "/getFilteredServerMapDataMadeOfDotGroup", params = "serviceTypeCode")
+    @JsonView({MapViews.Detailed.class})
     public FilterMapWrap getFilteredServerMapDataMadeOfDotGroup(
             @RequestParam("applicationName") @NotBlank String applicationName,
             @RequestParam("serviceTypeCode") short serviceTypeCode,
@@ -106,6 +113,7 @@ public class FilteredMapController {
     }
 
     @GetMapping(value = "/getFilteredServerMapDataMadeOfDotGroup", params = "serviceTypeName")
+    @JsonView({MapViews.Detailed.class})
     public FilterMapWrap getFilteredServerMapDataMadeOfDotGroup(
             @RequestParam("applicationName") @NotBlank String applicationName,
             @RequestParam(value = "serviceTypeName", required = false) String serviceTypeName,
@@ -129,39 +137,31 @@ public class FilteredMapController {
         final LimitedScanResult<List<TransactionId>> limitedScanResult =
                 filteredMapService.selectTraceIdsFromApplicationTraceIndex(applicationName, range, limit);
 
-        final long lastScanTime = limitedScanResult.getLimitedTime();
+        final long lastScanTime = limitedScanResult.limitedTime();
         // original range: needed for visual chart data sampling
         final Range originalRange = Range.between(from, originTo);
         // needed to figure out already scanned ranged
         final Range scannerRange = Range.between(lastScanTime, to);
         logger.debug("originalRange: {}, scannerRange: {}", originalRange, scannerRange);
-        final FilteredMapServiceOption option = new FilteredMapServiceOption.Builder(
-                limitedScanResult.getScanData(),
-                originalRange,
-                xGroupUnit,
-                yGroupUnit,
-                filter,
-                viewVersion
-        ).setUseStatisticsAgentState(useStatisticsAgentState).build();
-        final ApplicationMap map = filteredMapService.selectApplicationMapWithScatterData(option);
+        final FilteredMapServiceOption option = new FilteredMapServiceOption
+                .Builder(limitedScanResult.scanData(), originalRange, xGroupUnit, yGroupUnit, filter, viewVersion)
+                .setUseStatisticsAgentState(useStatisticsAgentState)
+                .build();
+        final FilterMapWithScatter scatter = filteredMapService.selectApplicationMapWithScatterData(option);
+        ApplicationMap map = scatter.getApplicationMap();
 
         if (logger.isDebugEnabled()) {
             logger.debug("getFilteredServerMapData range scan(limit:{}) range:{} lastFetchedTimestamp:{}",
                     limit, range.prettyToString(), DateTimeFormatUtils.format(lastScanTime));
         }
 
-        final FilterMapWrap mapWrap = new FilterMapWrap(map, getTimeHistogramFormat(useLoadHistogramFormat));
+        TimeHistogramFormat format = TimeHistogramFormat.format(useLoadHistogramFormat);
+        final FilterMapWrap mapWrap = new FilterMapWrap(map, format);
         mapWrap.setLastFetchedTimestamp(lastScanTime);
+        mapWrap.setScatterDataMap(scatter.getScatterDataMap());
         return mapWrap;
     }
 
-    private static TimeHistogramFormat getTimeHistogramFormat(boolean useLoadHistogramFormat) {
-        if (useLoadHistogramFormat) {
-            return TimeHistogramFormat.V2;
-        } else {
-            return TimeHistogramFormat.V1;
-        }
-    }
 
     @GetMapping(value = "/getFilteredServerMapDataMadeOfDotGroupV3", params = "serviceTypeCode")
     public FilterMapWrap getFilteredServerMapDataMadeOfDotGroupV3(
@@ -193,6 +193,7 @@ public class FilteredMapController {
     }
 
     @GetMapping(value = "/getFilteredServerMapDataMadeOfDotGroupV3", params = "serviceTypeName")
+    @JsonView({NodeViews.Simplified.class})
     public FilterMapWrap getFilteredServerMapDataMadeOfDotGroupV3(
             @RequestParam("applicationName") String applicationName,
             @RequestParam(value = "serviceTypeName", required = false) String serviceTypeName,
@@ -218,22 +219,26 @@ public class FilteredMapController {
         final Range range = Range.between(from, to);
         final LimitedScanResult<List<TransactionId>> limitedScanResult = filteredMapService.selectTraceIdsFromApplicationTraceIndex(applicationName, range, limit);
 
-        final long lastScanTime = limitedScanResult.getLimitedTime();
+        final long lastScanTime = limitedScanResult.limitedTime();
         // original range: needed for visual chart data sampling
         final Range originalRange = Range.between(from, originTo);
         // needed to figure out already scanned ranged
         final Range scannerRange = Range.between(lastScanTime, to);
         logger.debug("originalRange:{} scannerRange:{} ", originalRange, scannerRange);
-        final FilteredMapServiceOption option = new FilteredMapServiceOption.Builder(limitedScanResult.getScanData(), originalRange, xGroupUnit, yGroupUnit, filter, viewVersion).setUseStatisticsAgentState(useStatisticsAgentState).build();
-        final ApplicationMap map = filteredMapService.selectApplicationMapWithScatterDataV3(option);
+        final FilteredMapServiceOption option = new FilteredMapServiceOption
+                .Builder(limitedScanResult.scanData(), originalRange, xGroupUnit, yGroupUnit, filter, viewVersion)
+                .setUseStatisticsAgentState(useStatisticsAgentState)
+                .build();
+        final FilterMapWithScatter map = filteredMapService.selectApplicationMapWithScatterData(option);
 
         if (logger.isDebugEnabled()) {
             logger.debug("getFilteredServerMapData range scan(limit:{}) range:{} lastFetchedTimestamp:{}", limit, range.prettyToString(), DateTimeFormatUtils.format(lastScanTime));
         }
 
-        FilterMapWrap mapWrap;
-        mapWrap = new FilterMapWrap(map, TimeHistogramFormat.V1);
+        FilterMapWrap mapWrap = new FilterMapWrap(map.getApplicationMap(), TimeHistogramFormat.V1);
         mapWrap.setLastFetchedTimestamp(lastScanTime);
+        mapWrap.setFilteredHistogram(true);
+        mapWrap.setScatterDataMap(map.getScatterDataMap());
         return mapWrap;
     }
 }

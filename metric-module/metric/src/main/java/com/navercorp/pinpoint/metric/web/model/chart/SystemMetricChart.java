@@ -19,7 +19,9 @@ package com.navercorp.pinpoint.metric.web.model.chart;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.ImmutableList;
 import com.navercorp.pinpoint.metric.common.model.Tag;
-import com.navercorp.pinpoint.metric.web.util.TimeWindow;
+import com.navercorp.pinpoint.common.server.util.timewindow.TimeWindow;
+import com.navercorp.pinpoint.metric.common.model.chart.Point;
+import com.navercorp.pinpoint.metric.common.model.chart.SystemMetricPoint;
 import com.navercorp.pinpoint.metric.web.view.SystemMetricChartSerializer;
 import com.navercorp.pinpoint.metric.web.model.SampledSystemMetric;
 
