@@ -18,8 +18,6 @@ package com.navercorp.pinpoint.exceptiontrace.web.util;
 import com.navercorp.pinpoint.common.server.util.EnumGetter;
 import com.navercorp.pinpoint.exceptiontrace.common.pinot.PinotColumns;
 
-import java.util.EnumSet;
-
 /**
  * @author intr3p1d
  */
@@ -27,7 +25,7 @@ public enum OrderByAttributes {
     ERROR_CLASS_NAME("errorClassName", PinotColumns.ERROR_CLASS_NAME),
     ERROR_MESSAGE("errorMessage", PinotColumns.ERROR_MESSAGE),
     TIMESTAMP("timestamp", PinotColumns.TIMESTAMP),
-    URI_TEMPLATE("uriTemplate", PinotColumns.URI_TEMPLATE);
+    URI_TEMPLATE("path", PinotColumns.URI_TEMPLATE);
 
     private static final EnumGetter<OrderByAttributes> GETTER = new EnumGetter<>(OrderByAttributes.class);
 
@@ -48,6 +46,6 @@ public enum OrderByAttributes {
     }
 
     public static OrderByAttributes fromValue(String name) {
-        return GETTER.fromValue(OrderByAttributes::getName, name);
+        return GETTER.fromValueIgnoreCase(OrderByAttributes::getName, name);
     }
 }

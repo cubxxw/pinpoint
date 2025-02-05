@@ -23,15 +23,15 @@ import com.navercorp.pinpoint.grpc.trace.PCmdStreamResponse;
 import com.navercorp.pinpoint.realtime.collector.receiver.grpc.GrpcAgentConnection;
 import com.navercorp.pinpoint.realtime.collector.receiver.grpc.GrpcAgentConnectionRepository;
 import com.navercorp.pinpoint.realtime.collector.service.ActiveThreadCountService;
+import com.navercorp.pinpoint.realtime.collector.sink.ActiveThreadCountPublisher;
 import com.navercorp.pinpoint.realtime.collector.sink.SinkRepository;
 import com.navercorp.pinpoint.realtime.dto.ATCDemand;
 import com.navercorp.pinpoint.realtime.dto.ATCSupply;
-import com.navercorp.pinpoint.thrift.io.TCommandType;
+import com.navercorp.pinpoint.realtime.dto.CommandType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.FluxSink;
 
 import java.time.Duration;
 import java.util.List;
@@ -51,13 +51,13 @@ public class GrpcActiveThreadCountServiceTest {
 
     private static final long SINK_ID = 0;
 
-    @Mock SinkRepository<FluxSink<PCmdActiveThreadCountRes>> sinkRepository;
+    @Mock SinkRepository<ActiveThreadCountPublisher> sinkRepository;
     @Mock GrpcAgentConnection connection;
     @Mock GrpcAgentConnectionRepository connectionRepository;
     @Test
     public void test() {
         AtomicInteger seqCounter = new AtomicInteger(0);
-        AtomicReference<FluxSink<Object>> sinkRef = new AtomicReference<>();
+        AtomicReference<ActiveThreadCountPublisher> sinkRef = new AtomicReference<>();
 
         doAnswer(inv -> {
             sinkRef.set(inv.getArgument(0));
@@ -69,15 +69,15 @@ public class GrpcActiveThreadCountServiceTest {
             assertThat(req.getRequestId()).isEqualTo(SINK_ID);
             assertThat(req.getCommandCase()).isEqualTo(PCmdRequest.CommandCase.COMMANDACTIVETHREADCOUNT);
 
-            FluxSink<Object> sink = sinkRef.get();
-            sink.next(mockResponse(seqCounter.incrementAndGet()));
-            sink.next(mockResponse(seqCounter.incrementAndGet()));
-            sink.next(mockResponse(seqCounter.incrementAndGet()));
+            ActiveThreadCountPublisher sink = sinkRef.get();
+            sink.publish(mockResponse(seqCounter.incrementAndGet()));
+            sink.publish(mockResponse(seqCounter.incrementAndGet()));
+            sink.publish(mockResponse(seqCounter.incrementAndGet()));
             sink.complete();
             return null;
         }).when(connection).request(any());
 
-        doReturn(List.of(TCommandType.ACTIVE_THREAD_COUNT)).when(connection)
+        doReturn(List.of(CommandType.ACTIVE_THREAD_COUNT)).when(connection)
                 .getSupportCommandList();
 
         doReturn(connection).when(connectionRepository)

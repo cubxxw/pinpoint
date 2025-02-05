@@ -16,11 +16,11 @@
 
 package com.navercorp.pinpoint.batch.alarm.collector;
 
-import com.navercorp.pinpoint.web.alarm.DataCollectorCategory;
-import com.navercorp.pinpoint.web.applicationmap.histogram.TimeHistogram;
-import com.navercorp.pinpoint.web.dao.MapResponseDao;
-import com.navercorp.pinpoint.web.vo.Application;
 import com.navercorp.pinpoint.common.server.util.time.Range;
+import com.navercorp.pinpoint.web.alarm.DataCollectorCategory;
+import com.navercorp.pinpoint.web.applicationmap.dao.MapResponseDao;
+import com.navercorp.pinpoint.web.applicationmap.histogram.TimeHistogram;
+import com.navercorp.pinpoint.web.vo.Application;
 import com.navercorp.pinpoint.web.vo.ResponseTime;
 
 import java.util.Collection;
@@ -60,7 +60,7 @@ public class ResponseTimeDataCollector extends DataCollector {
             return;
         }
 
-        Range range = Range.newUncheckedRange(timeSlotEndTime - slotInterval, timeSlotEndTime);
+        Range range = Range.between(timeSlotEndTime - slotInterval, timeSlotEndTime);
         List<ResponseTime> responseTimes = responseDao.selectResponseTime(application, range);
 
         for (ResponseTime responseTime : responseTimes) {

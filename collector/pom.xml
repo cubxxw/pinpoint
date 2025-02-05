@@ -21,7 +21,7 @@
     <parent>
         <groupId>com.navercorp.pinpoint</groupId>
         <artifactId>pinpoint</artifactId>
-        <version>3.0.0-SNAPSHOT</version>
+        <version>3.1.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>pinpoint-collector</artifactId>
@@ -31,10 +31,6 @@
     <properties>
         <jdk.version>17</jdk.version>
         <jdk.home>${env.JAVA_17_HOME}</jdk.home>
-
-        <javax.servlet.version>${javax.servlet4.version}</javax.servlet.version>
-
-        <pinpoint.collector.executable.name>${project.artifactId}-boot-${project.version}</pinpoint.collector.executable.name>
     </properties>
 
     <dependencies>
@@ -60,23 +56,11 @@
         </dependency>
         <dependency>
             <groupId>com.navercorp.pinpoint</groupId>
-            <artifactId>pinpoint-commons-server-cluster</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.navercorp.pinpoint</groupId>
             <artifactId>pinpoint-commons-hbase</artifactId>
         </dependency>
         <dependency>
             <groupId>com.navercorp.pinpoint</groupId>
-            <artifactId>pinpoint-rpc</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.navercorp.pinpoint</groupId>
-            <artifactId>pinpoint-thrift</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.navercorp.pinpoint</groupId>
-            <artifactId>pinpoint-thrift-datasender</artifactId>
+            <artifactId>pinpoint-collector-monitor</artifactId>
         </dependency>
         <dependency>
             <groupId>com.navercorp.pinpoint</groupId>
@@ -87,20 +71,6 @@
             <artifactId>pinpoint-plugins-assembly</artifactId>
             <type>pom</type>
         </dependency>
-        <dependency>
-            <groupId>org.apache.zookeeper</groupId>
-            <artifactId>zookeeper</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>log4j</groupId>
-                    <artifactId>log4j</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
 
         <dependency>
             <groupId>com.navercorp.pinpoint</groupId>
@@ -108,22 +78,15 @@
             <exclusions>
                 <exclusion>
                     <groupId>com.navercorp.pinpoint</groupId>
-                    <artifactId>pinpoint-bootstrap</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.navercorp.pinpoint</groupId>
                     <artifactId>pinpoint-bootstrap-core</artifactId>
                 </exclusion>
             </exclusions>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty</artifactId>
         </dependency>
 
         <dependency>
@@ -133,11 +96,6 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-collections4</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.thrift</groupId>
-            <artifactId>libthrift</artifactId>
         </dependency>
 
         <!-- if  2.3.x jackson needed, should modify scope runtime -->
@@ -166,16 +124,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-jcl</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-logging</groupId>
-                    <artifactId>commons-logging</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j2-impl</artifactId>
             <scope>compile</scope>
         </dependency>
@@ -191,12 +139,6 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-core</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-logging</groupId>
-                    <artifactId>commons-logging</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
@@ -216,11 +158,22 @@
             <artifactId>spring-webmvc</artifactId>
         </dependency>
 
-        <!--        <dependency>-->
-        <!--            <groupId>org.springframework.boot</groupId>-->
-        <!--            <artifactId>spring-boot-starter-actuator</artifactId>-->
-        <!--            <version>${spring-boot.version}</version>-->
-        <!--        </dependency>-->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
+            <version>8.13.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -250,37 +203,25 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- serving performance metrics -->
-        <dependency>
-            <groupId>io.dropwizard.metrics</groupId>
-            <artifactId>metrics-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.dropwizard.metrics</groupId>
-            <artifactId>metrics-jvm</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.dropwizard.metrics</groupId>
-            <artifactId>metrics-servlets</artifactId>
-        </dependency>
         <dependency>
             <!-- servlet artifactid is odd -->
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
         </dependency>
 
+        <!-- serving performance metrics with micrometer -->
         <dependency>
-            <groupId>com.navercorp.pinpoint</groupId>
-            <artifactId>pinpoint-rpc</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
         </dependency>
+
+
+
         <dependency>
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
-            <version>2.1.1</version>
         </dependency>
+
     </dependencies>
 
     <build>
@@ -292,8 +233,8 @@
                     <mainClass>com.navercorp.pinpoint.collector.CollectorApp</mainClass>
                     <outputDirectory>${project.build.directory}/deploy</outputDirectory>
                     <executable>true</executable>
-                    <attach>false</attach>
-                    <finalName>${pinpoint.collector.executable.name}</finalName>
+                    <attach>true</attach>
+                    <classifier>exec</classifier>
                     <image>
                         <name>${docker.repository.name}/pinpoint-collector</name>
                         <tags>${docker.repository.name}/pinpoint-collector:${project.version},${docker.repository.name}/pinpoint-collector:latest</tags>

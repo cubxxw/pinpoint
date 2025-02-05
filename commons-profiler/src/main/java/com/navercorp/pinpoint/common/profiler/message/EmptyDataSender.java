@@ -17,13 +17,10 @@
 package com.navercorp.pinpoint.common.profiler.message;
 
 
-import java.util.function.BiConsumer;
-
-
 /**
  * @author Woonduk Kang(emeroad)
  */
-public class EmptyDataSender<REQ, RES> implements EnhancedDataSender<REQ, RES> {
+public class EmptyDataSender<REQ> implements DataSender<REQ> {
 
     private static final DataSender<?> INSTANCE = new EmptyDataSender<>();
 
@@ -39,23 +36,7 @@ public class EmptyDataSender<REQ, RES> implements EnhancedDataSender<REQ, RES> {
 
 
     @Override
-    public void stop() {
-    }
-
-    @Override
-    public boolean request(REQ data) {
-        return true;
-    }
-
-    @Override
-    public boolean request(REQ data, int retry) {
-        return false;
-    }
-
-
-    @Override
-    public boolean request(REQ data, BiConsumer<RES, Throwable> listener) {
-        return false;
+    public void close() {
     }
 
 }

@@ -33,8 +33,8 @@ import com.navercorp.pinpoint.web.vo.scatter.Dot;
 import com.sematext.hbase.wd.AbstractRowKeyDistributor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -71,6 +71,8 @@ public class HbaseApplicationTraceIndexDaoTest {
 
     private ApplicationTraceIndexDao applicationTraceIndexDao;
 
+    @AutoClose
+    @SuppressWarnings("unused")
     private AutoCloseable openMocks;
     
     @BeforeEach
@@ -78,11 +80,6 @@ public class HbaseApplicationTraceIndexDaoTest {
         openMocks = MockitoAnnotations.openMocks(this);
         ScatterChartProperties scatterChartProperties = new ScatterChartProperties();
         this.applicationTraceIndexDao = new HbaseApplicationTraceIndexDao(scatterChartProperties, hbaseOperations, tableNameProvider, traceIndexMapper, traceIndexScatterMapper, traceIdRowKeyDistributor);
-    }
-
-    @AfterEach
-    public void afterEach() throws Exception {
-        openMocks.close();
     }
 
     @Test
@@ -99,13 +96,13 @@ public class HbaseApplicationTraceIndexDaoTest {
                 anyInt(), any(RowMapper.class), any(LimitEventHandler.class), anyInt())).thenReturn(scannedList);
         LimitedScanResult<List<TransactionId>> result =
                 this.applicationTraceIndexDao.scanTraceIndex("app", Range.between(1000L, 5000L), 20, false);
-        Assertions.assertEquals(1000L, result.getLimitedTime());
-        Assertions.assertEquals(ListListUtils.toList(scannedList), result.getScanData());
+        Assertions.assertEquals(1000L, result.limitedTime());
+        Assertions.assertEquals(ListListUtils.toList(scannedList), result.scanData());
 
         // using last row accessor
         result = this.applicationTraceIndexDao.scanTraceIndex("app", Range.between(1000L, 5000L), 5, true);
-        Assertions.assertEquals(-1L, result.getLimitedTime());
-        Assertions.assertEquals(ListListUtils.toList(scannedList), result.getScanData());
+        Assertions.assertEquals(-1L, result.limitedTime());
+        Assertions.assertEquals(ListListUtils.toList(scannedList), result.scanData());
 
     }
 
@@ -125,7 +122,7 @@ public class HbaseApplicationTraceIndexDaoTest {
         LimitedScanResult<List<Dot>> scanResult
                 = this.applicationTraceIndexDao.scanTraceScatterData("app", range, 10, false);
         ScatterDataBuilder builder = new ScatterDataBuilder(range.getFrom(), range.getTo(), 1, 5);
-        scanResult.getScanData().forEach(builder::addDot);
+        scanResult.scanData().forEach(builder::addDot);
         ScatterData result = builder.build();
 
         Assertions.assertEquals(1000L, result.getFrom());
@@ -142,7 +139,7 @@ public class HbaseApplicationTraceIndexDaoTest {
         LimitedScanResult<List<Dot>> scanResult
                 = this.applicationTraceIndexDao.scanTraceScatterData("app", range, 10, false);
         ScatterDataBuilder builder = new ScatterDataBuilder(range.getFrom(), range.getTo(), 1, 5);
-        scanResult.getScanData().forEach(builder::addDot);
+        scanResult.scanData().forEach(builder::addDot);
         ScatterData result = builder.build();
         Assertions.assertEquals(1000L, result.getFrom());
         Assertions.assertEquals(5000L, result.getTo());
@@ -152,7 +149,7 @@ public class HbaseApplicationTraceIndexDaoTest {
 
     private List<List<Dot>> createScatterDotList() {
         List<List<Dot>> ret = new ArrayList<>();
-        TransactionId transactionId = new TransactionId("A", 1, 1);
+        TransactionId transactionId = TransactionId.of("A", 1, 1);
         addDot(ret, new Dot(transactionId, 2000L, 1000, 0, "a1"));
         addDot(ret, new Dot(transactionId, 3000L, 5000, 0, "a2"));
         addDot(ret, new Dot(transactionId, 2400L, 3000, 0, "a3"));
@@ -169,7 +166,7 @@ public class HbaseApplicationTraceIndexDaoTest {
         for (int i = 0; i < 5; i++) {
             ret.add(new ArrayList<>());
             for (int j = 0; j < 2; j++) {
-                ret.get(i).add(j, new TransactionId("agentId" + i, 1000L * (i + 1), j));
+                ret.get(i).add(j, TransactionId.of("agentId" + i, 1000L * (i + 1), j));
             }
         }
         return ret;

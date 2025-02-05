@@ -20,8 +20,6 @@ import com.google.protobuf.GeneratedMessageV3;
 import com.navercorp.pinpoint.collector.receiver.DispatchHandler;
 import com.navercorp.pinpoint.common.profiler.logging.ThrottledLogger;
 import com.navercorp.pinpoint.grpc.MessageFormatUtils;
-import com.navercorp.pinpoint.grpc.StatusError;
-import com.navercorp.pinpoint.grpc.StatusErrors;
 import com.navercorp.pinpoint.grpc.server.ServerContext;
 import com.navercorp.pinpoint.grpc.server.lifecycle.PingEventHandler;
 import com.navercorp.pinpoint.grpc.trace.AgentGrpc;
@@ -33,8 +31,10 @@ import com.navercorp.pinpoint.io.header.HeaderEntity;
 import com.navercorp.pinpoint.io.header.v2.HeaderV2;
 import com.navercorp.pinpoint.io.request.DefaultMessage;
 import com.navercorp.pinpoint.io.request.Message;
-import com.navercorp.pinpoint.thrift.io.DefaultTBaseLocator;
+import com.navercorp.pinpoint.io.util.MessageType;
 import io.grpc.Context;
+import io.grpc.Metadata;
+import io.grpc.Status;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import org.apache.logging.log4j.LogManager;
@@ -52,8 +52,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class AgentService extends AgentGrpc.AgentImplBase {
     private static final AtomicLong idAllocator = new AtomicLong();
+
     private final Logger logger = LogManager.getLogger(this.getClass());
-    private final boolean isDebug = logger.isDebugEnabled();
+
     private final SimpleRequestHandlerAdaptor<GeneratedMessageV3, GeneratedMessageV3> simpleRequestHandlerAdaptor;
     private final PingEventHandler pingEventHandler;
     private final Executor executor;
@@ -68,7 +69,7 @@ public class AgentService extends AgentGrpc.AgentImplBase {
 
     @Override
     public void requestAgentInfo(PAgentInfo agentInfo, StreamObserver<PResult> responseObserver) {
-        if (isDebug) {
+        if (logger.isDebugEnabled()) {
             logger.debug("Request PAgentInfo={}", MessageFormatUtils.debugLog(agentInfo));
         }
 
@@ -76,7 +77,7 @@ public class AgentService extends AgentGrpc.AgentImplBase {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    final Message<PAgentInfo> message = newMessage(agentInfo, DefaultTBaseLocator.AGENT_INFO);
+                    final Message<PAgentInfo> message = newMessage(agentInfo, MessageType.AGENT_INFO);
                     simpleRequestHandlerAdaptor.request(message, responseObserver);
                     // Update service type of PingSession
                     AgentService.this.pingEventHandler.update((short) agentInfo.getServiceType());
@@ -90,7 +91,8 @@ public class AgentService extends AgentGrpc.AgentImplBase {
 
 
     @Override
-    public StreamObserver<PPing> pingSession(final StreamObserver<PPing> responseObserver) {
+    public StreamObserver<PPing> pingSession(final StreamObserver<PPing> response) {
+        final ServerCallStreamObserver<PPing> responseObserver = (ServerCallStreamObserver<PPing>) response;
         return new StreamObserver<>() {
             private final AtomicBoolean first = new AtomicBoolean(false);
             private final ThrottledLogger thLogger = ThrottledLogger.getLogger(AgentService.this.logger, 100);
@@ -100,18 +102,18 @@ public class AgentService extends AgentGrpc.AgentImplBase {
             public void onNext(PPing ping) {
                 if (first.compareAndSet(false, true)) {
                     // Only first
-                    if (isDebug) {
+                    if (logger.isDebugEnabled()) {
                         thLogger.debug("PingSession:{} start:{}", id, MessageFormatUtils.debugLog(ping));
                     }
                     AgentService.this.pingEventHandler.connect();
                 } else {
                     AgentService.this.pingEventHandler.ping();
                 }
-                if (isDebug) {
+                if (logger.isDebugEnabled()) {
                     thLogger.debug("PingSession:{} onNext:{}", id, MessageFormatUtils.debugLog(ping));
                 }
-                PPing replay = newPing();
-                if (isReady(responseObserver)) {
+                if (responseObserver.isReady()) {
+                    PPing replay = newPing();
                     responseObserver.onNext(replay);
                 } else {
                     thLogger.warn("ping message is ignored: stream is not ready: {}", ServerContext.getAgentInfo());
@@ -119,24 +121,23 @@ public class AgentService extends AgentGrpc.AgentImplBase {
             }
 
             private PPing newPing() {
-                PPing.Builder builder = PPing.newBuilder();
-                return builder.build();
+                return PPing.getDefaultInstance();
             }
 
             @Override
             public void onError(Throwable t) {
-                final StatusError statusError = StatusErrors.throwable(t);
-                if (statusError.isSimpleError()) {
-                    thLogger.info("Failed to ping stream, id={}, cause={}", id, statusError.getMessage());
-                } else {
-                    thLogger.warn("Failed to ping stream, id={}, cause={}", id, statusError.getMessage(), statusError.getThrowable());
+                final Status status = Status.fromThrowable(t);
+                final Metadata metadata = Status.trailersFromThrowable(t);
+                if (thLogger.isInfoEnabled()) {
+                    thLogger.info("Failed to ping stream, id={}, {} metadata:{}", id, status, metadata);
                 }
+                // responseObserver.onCompleted();
                 disconnect();
             }
 
             @Override
             public void onCompleted() {
-                if (isDebug) {
+                if (logger.isDebugEnabled()) {
                     thLogger.debug("PingSession:{} onCompleted()", id);
                 }
                 responseObserver.onCompleted();
@@ -150,20 +151,12 @@ public class AgentService extends AgentGrpc.AgentImplBase {
         };
     }
 
-    private static boolean isReady(StreamObserver<PPing> responseObserver) {
-        if (responseObserver instanceof ServerCallStreamObserver<?>) {
-            ServerCallStreamObserver<PPing> observer = (ServerCallStreamObserver<PPing>) responseObserver;
-            return observer.isReady();
-        }
-        return true;
-    }
-
     private long nextSessionId() {
         return idAllocator.getAndIncrement();
     }
 
-    private <T> Message<T> newMessage(T requestData, short type) {
-        final Header header = new HeaderV2(Header.SIGNATURE, HeaderV2.VERSION, type);
+    private <T> Message<T> newMessage(T requestData, MessageType type) {
+        final Header header = new HeaderV2(Header.SIGNATURE, HeaderV2.VERSION, type.getCode());
         final HeaderEntity headerEntity = new HeaderEntity(Collections.emptyMap());
         return new DefaultMessage<>(header, headerEntity, requestData);
     }

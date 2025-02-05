@@ -25,34 +25,40 @@ import com.navercorp.pinpoint.web.applicationmap.appender.histogram.NodeHistogra
 import com.navercorp.pinpoint.web.applicationmap.appender.server.ServerInfoAppenderFactory;
 import com.navercorp.pinpoint.web.applicationmap.map.ApplicationsMapCreatorFactory;
 import com.navercorp.pinpoint.web.applicationmap.map.LinkSelectorFactory;
+import com.navercorp.pinpoint.web.applicationmap.map.processor.ApplicationLimiterProcessorFactory;
+import com.navercorp.pinpoint.web.applicationmap.map.processor.LinkDataMapProcessor;
 import com.navercorp.pinpoint.web.applicationmap.service.LinkDataMapService;
 import com.navercorp.pinpoint.web.dao.HostApplicationMapDao;
 import com.navercorp.pinpoint.web.security.ServerMapDataFilter;
-import com.navercorp.pinpoint.web.task.ChainedTaskDecorator;
 import com.navercorp.pinpoint.web.task.RequestContextPropagatingTaskDecorator;
 import com.navercorp.pinpoint.web.task.SecurityContextPropagatingTaskDecorator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.task.TaskDecorator;
+import org.springframework.core.task.support.CompositeTaskDecorator;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 
 @Configuration
 @ComponentScan(basePackages = {
         "com.navercorp.pinpoint.web.applicationmap.service",
-        "com.navercorp.pinpoint.web.applicationmap.controller",
+        "com.navercorp.pinpoint.web.applicationmap.controller"
 })
+@Import(MapHbaseConfiguration.class)
 public class ApplicationMapModule {
-    private final Logger logger = LogManager.getLogger(ApplicationMapModule.class);
+    private static final Logger logger = LogManager.getLogger(ApplicationMapModule.class);
 
     public ApplicationMapModule() {
         logger.info("Install {}", ApplicationMapModule.class.getSimpleName());
@@ -81,11 +87,17 @@ public class ApplicationMapModule {
     }
 
     @Bean
+    public Supplier<LinkDataMapProcessor> applicationLimiterProcessorFactory(@Value("${pinpoint.server-map.read-limit:100}") int limit) {
+        return new ApplicationLimiterProcessorFactory(limit);
+    }
+
+    @Bean
     public LinkSelectorFactory linkSelectorFactory(LinkDataMapService linkDataMapService,
                                                    ApplicationsMapCreatorFactory applicationsMapCreatorFactory,
                                                    HostApplicationMapDao hostApplicationMapDao,
-                                                   Optional<ServerMapDataFilter> serverMapDataFilter) {
-        return new LinkSelectorFactory(linkDataMapService, applicationsMapCreatorFactory, hostApplicationMapDao, serverMapDataFilter);
+                                                   Optional<ServerMapDataFilter> serverMapDataFilter,
+                                                   Supplier<LinkDataMapProcessor> applicationLimiterProcessorFactory) {
+        return new LinkSelectorFactory(linkDataMapService, applicationsMapCreatorFactory, hostApplicationMapDao, serverMapDataFilter, applicationLimiterProcessorFactory);
     }
 
     @Bean
@@ -142,7 +154,7 @@ public class ApplicationMapModule {
     public TaskDecorator contextPropagatingTaskDecorator() {
         TaskDecorator requestDecorator = new RequestContextPropagatingTaskDecorator();
         TaskDecorator securityDecorator = new SecurityContextPropagatingTaskDecorator();
-        return new ChainedTaskDecorator(List.of(requestDecorator, securityDecorator));
+        return new CompositeTaskDecorator(List.of(requestDecorator, securityDecorator));
     }
 
     @Bean

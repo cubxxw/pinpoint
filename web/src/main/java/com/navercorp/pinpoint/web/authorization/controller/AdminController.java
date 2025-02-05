@@ -39,7 +39,7 @@ import java.util.Objects;
  * @author HyunGil Jeong
  */
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("/api/admin")
 @Validated
 public class AdminController {
 
@@ -79,6 +79,7 @@ public class AdminController {
     }
 
     @RequestMapping(value = "/removeInactiveAgents")
+    @Deprecated
     public String removeInactiveAgents(
             @RequestParam(value = "durationDays", defaultValue = "30") @PositiveOrZero int durationDays
     ) {

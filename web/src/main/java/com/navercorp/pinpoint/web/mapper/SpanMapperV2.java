@@ -16,6 +16,8 @@
 
 package com.navercorp.pinpoint.web.mapper;
 
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.navercorp.pinpoint.common.buffer.Buffer;
 import com.navercorp.pinpoint.common.buffer.CachedStringAllocator;
 import com.navercorp.pinpoint.common.buffer.FixedBuffer;
@@ -37,16 +39,13 @@ import com.navercorp.pinpoint.common.trace.ServiceTypeCategory;
 import com.navercorp.pinpoint.common.util.CollectionUtils;
 import com.navercorp.pinpoint.common.util.LRUCache;
 import com.navercorp.pinpoint.io.SpanVersion;
-
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.ListMultimap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -121,15 +120,13 @@ public class SpanMapperV2 implements RowMapper<List<SpanBo>> {
 
                 spanDecoder = resolveDecoder(columnValue);
                 final Object decodeObject = spanDecoder.decode(qualifier, columnValue, decodingContext);
-                if (decodeObject instanceof SpanBo) {
-                    SpanBo spanBo = (SpanBo) decodeObject;
+                if (decodeObject instanceof SpanBo spanBo) {
                     if (logger.isTraceEnabled()) {
                         logger.trace("spanBo:{}", spanBo);
                     }
                     AgentKey agentKey = newAgentKey(spanBo);
                     spanMap.put(agentKey, spanBo);
-                } else if (decodeObject instanceof SpanChunkBo) {
-                    SpanChunkBo spanChunkBo = (SpanChunkBo) decodeObject;
+                } else if (decodeObject instanceof SpanChunkBo spanChunkBo) {
                     if (logger.isTraceEnabled()) {
                         logger.trace("spanChunkBo:{}", spanChunkBo);
                     }
@@ -258,51 +255,6 @@ public class SpanMapperV2 implements RowMapper<List<SpanBo>> {
         return new AgentKey(basicSpan.getApplicationId(), basicSpan.getAgentId(), basicSpan.getAgentStartTime(), basicSpan.getSpanId());
     }
 
-    public static class AgentKey {
-        private final long spanId;
-        private final String applicationId;
-        private final String agentId;
-        private final long agentStartTime;
-
-
-        public AgentKey(String applicationId, String agentId, long agentStartTime, long spanId) {
-            this.applicationId = Objects.requireNonNull(applicationId, "applicationId");
-            this.agentId = Objects.requireNonNull(agentId, "agentId");
-            this.agentStartTime = agentStartTime;
-            this.spanId = spanId;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            AgentKey agentKey = (AgentKey) o;
-
-            if (spanId != agentKey.spanId) return false;
-            if (agentStartTime != agentKey.agentStartTime) return false;
-            if (!applicationId.equals(agentKey.applicationId)) return false;
-            return agentId.equals(agentKey.agentId);
-
-        }
-
-        @Override
-        public int hashCode() {
-            int result = (int) (spanId ^ (spanId >>> 32));
-            result = 31 * result + applicationId.hashCode();
-            result = 31 * result + agentId.hashCode();
-            result = 31 * result + (int) (agentStartTime ^ (agentStartTime >>> 32));
-            return result;
-        }
-
-        @Override
-        public String toString() {
-            return "AgentKey{" +
-                    "spanId=" + spanId +
-                    ", applicationId='" + applicationId + '\'' +
-                    ", agentId='" + agentId + '\'' +
-                    ", agentStartTime=" + agentStartTime +
-                    '}';
-        }
+    private record AgentKey(String applicationId, String agentId, long agentStartTime, long spanId) {
     }
 }

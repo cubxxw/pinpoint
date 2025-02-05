@@ -18,7 +18,12 @@ package com.navercorp.pinpoint.collector.handler.grpc;
 
 import com.google.protobuf.GeneratedMessageV3;
 import com.navercorp.pinpoint.collector.handler.SimpleHandler;
+import com.navercorp.pinpoint.collector.sampler.Sampler;
+import com.navercorp.pinpoint.collector.sampler.SpanSamplerFactory;
 import com.navercorp.pinpoint.collector.service.TraceService;
+import com.navercorp.pinpoint.common.hbase.RequestNotPermittedException;
+import com.navercorp.pinpoint.common.profiler.logging.LogSampler;
+import com.navercorp.pinpoint.common.server.bo.BasicSpan;
 import com.navercorp.pinpoint.common.server.bo.SpanBo;
 import com.navercorp.pinpoint.common.server.bo.grpc.BindAttribute;
 import com.navercorp.pinpoint.common.server.bo.grpc.GrpcSpanFactory;
@@ -48,6 +53,8 @@ import java.util.Objects;
 public class GrpcSpanHandler implements SimpleHandler<GeneratedMessageV3> {
 
     private final Logger logger = LogManager.getLogger(getClass());
+    private final LogSampler infoLog = new LogSampler(1000);
+    private final LogSampler warnLog = new LogSampler(100);
     private final boolean isDebug = logger.isDebugEnabled();
 
     private final TraceService[] traceServices;
@@ -56,10 +63,13 @@ public class GrpcSpanHandler implements SimpleHandler<GeneratedMessageV3> {
 
     private final AcceptedTimeService acceptedTimeService;
 
-    public GrpcSpanHandler(TraceService[] traceServices, GrpcSpanFactory spanFactory, AcceptedTimeService acceptedTimeService) {
+    private final Sampler<BasicSpan> sampler;
+
+    public GrpcSpanHandler(TraceService[] traceServices, GrpcSpanFactory spanFactory, AcceptedTimeService acceptedTimeService, SpanSamplerFactory spanSamplerFactory) {
         this.traceServices = Objects.requireNonNull(traceServices, "traceServices");
         this.spanFactory = Objects.requireNonNull(spanFactory, "spanFactory");
         this.acceptedTimeService = Objects.requireNonNull(acceptedTimeService, "acceptedTimeService");
+        this.sampler = spanSamplerFactory.createBasicSpanSampler();
 
         logger.info("TraceServices {}", Arrays.toString(traceServices));
     }
@@ -67,8 +77,8 @@ public class GrpcSpanHandler implements SimpleHandler<GeneratedMessageV3> {
     @Override
     public void handleSimple(ServerRequest<GeneratedMessageV3> serverRequest) {
         final GeneratedMessageV3 data = serverRequest.getData();
-        if (data instanceof PSpan) {
-            handleSpan((PSpan) data);
+        if (data instanceof PSpan span) {
+            handleSpan(span);
         } else {
             logger.warn("Invalid request type. serverRequest={}", serverRequest);
             throw Status.INTERNAL.withDescription("Bad Request(invalid request type)").asRuntimeException();
@@ -83,11 +93,25 @@ public class GrpcSpanHandler implements SimpleHandler<GeneratedMessageV3> {
         final Header header = ServerContext.getAgentInfo();
         final BindAttribute attribute = BindAttribute.of(header, acceptedTimeService.getAcceptedTime());
         final SpanBo spanBo = spanFactory.buildSpanBo(span, attribute);
+        if (!sampler.isSampling(spanBo)) {
+            if (isDebug) {
+                logger.debug("unsampled PSpan={}", createSimpleSpanLog(span));
+            } else {
+                infoLog.log(() -> {
+                    if (logger.isInfoEnabled()) {
+                        logger.info("unsampled PSpan={}", createSimpleSpanLog(span));
+                    }
+                });
+            }
+            return;
+        }
         for (TraceService traceService : traceServices) {
             try {
                 traceService.insertSpan(spanBo);
+            } catch (RequestNotPermittedException notPermitted) {
+                warnLog.log((c) -> logger.warn("Failed to handle Span RequestNotPermitted:{} {}", notPermitted.getMessage(), c));
             } catch (Throwable e) {
-                logger.warn("Failed to handle span={}", MessageFormatUtils.debugLog(span), e);
+                logger.warn("Failed to handle Span={}", MessageFormatUtils.debugLog(span), e);
             }
         }
     }

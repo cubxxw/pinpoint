@@ -24,12 +24,13 @@ import com.navercorp.pinpoint.realtime.collector.mapper.ATDSupplyMapper;
 import com.navercorp.pinpoint.realtime.collector.receiver.grpc.GrpcAgentConnection;
 import com.navercorp.pinpoint.realtime.collector.receiver.grpc.GrpcAgentConnectionRepository;
 import com.navercorp.pinpoint.realtime.collector.service.ActiveThreadDumpService;
+import com.navercorp.pinpoint.realtime.collector.sink.ActiveThreadDumpPublisher;
+import com.navercorp.pinpoint.realtime.collector.sink.ActiveThreadLightDumpPublisher;
 import com.navercorp.pinpoint.realtime.collector.sink.SinkRepository;
 import com.navercorp.pinpoint.realtime.dto.ATDDemand;
 import com.navercorp.pinpoint.realtime.dto.ATDSupply;
-import com.navercorp.pinpoint.thrift.io.TCommandType;
+import com.navercorp.pinpoint.realtime.dto.CommandType;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.MonoSink;
 
 import java.util.Objects;
 
@@ -39,13 +40,13 @@ import java.util.Objects;
 class GrpcActiveThreadDumpService implements ActiveThreadDumpService {
 
     private final GrpcAgentConnectionRepository connectionRepository;
-    private final SinkRepository<MonoSink<PCmdActiveThreadDumpRes>> sinkRepository;
-    private final SinkRepository<MonoSink<PCmdActiveThreadLightDumpRes>> lightSinkRepository;
+    private final SinkRepository<ActiveThreadDumpPublisher> sinkRepository;
+    private final SinkRepository<ActiveThreadLightDumpPublisher> lightSinkRepository;
 
     GrpcActiveThreadDumpService(
             GrpcAgentConnectionRepository connectionRepository,
-            SinkRepository<MonoSink<PCmdActiveThreadDumpRes>> sinkRepository,
-            SinkRepository<MonoSink<PCmdActiveThreadLightDumpRes>> lightSinkRepository
+            SinkRepository<ActiveThreadDumpPublisher> sinkRepository,
+            SinkRepository<ActiveThreadLightDumpPublisher> lightSinkRepository
     ) {
         this.connectionRepository = Objects.requireNonNull(connectionRepository, "connectionRepository");
         this.sinkRepository = Objects.requireNonNull(sinkRepository, "sinkRepository");
@@ -70,12 +71,13 @@ class GrpcActiveThreadDumpService implements ActiveThreadDumpService {
                 sink.error(new IgnoreDemandException("Connection not found"));
                 return;
             }
-            if (!conn.getSupportCommandList().contains(TCommandType.ACTIVE_THREAD_DUMP)) {
+            if (!conn.getSupportCommandList().contains(CommandType.ACTIVE_THREAD_DUMP)) {
                 sink.error(new RuntimeException("Command not supported"));
                 return;
             }
 
-            long sinkId = this.sinkRepository.put(sink);
+            final long sinkId = this.sinkRepository.put(new ActiveThreadDumpPublisher(sink));
+            sink.onDispose(() -> this.sinkRepository.invalidate(sinkId));
             conn.request(PCmdRequest.newBuilder()
                     .setRequestId(Long.valueOf(sinkId).intValue())
                     .setCommandActiveThreadDump(ATDDemandMapper.intoDetailed(demand))
@@ -92,12 +94,13 @@ class GrpcActiveThreadDumpService implements ActiveThreadDumpService {
                 sink.error(new IgnoreDemandException("Connection not found"));
                 return;
             }
-            if (!conn.getSupportCommandList().contains(TCommandType.ACTIVE_THREAD_LIGHT_DUMP)) {
+            if (!conn.getSupportCommandList().contains(CommandType.ACTIVE_THREAD_LIGHT_DUMP)) {
                 sink.error(new RuntimeException("Command not supported"));
                 return;
             }
 
-            long sinkId = this.lightSinkRepository.put(sink);
+            final long sinkId = this.lightSinkRepository.put(new ActiveThreadLightDumpPublisher(sink));
+            sink.onDispose(() -> this.sinkRepository.invalidate(sinkId));
             conn.request(PCmdRequest.newBuilder()
                     .setRequestId(Long.valueOf(sinkId).intValue())
                     .setCommandActiveThreadLightDump(ATDDemandMapper.intoLight(demand))

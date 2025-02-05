@@ -16,12 +16,12 @@
 
 package com.navercorp.pinpoint.web.websocket;
 
-import com.navercorp.pinpoint.rpc.util.MapUtils;
 import com.navercorp.pinpoint.web.security.ServerMapDataFilter;
 import com.navercorp.pinpoint.web.websocket.message.PinpointWebSocketMessage;
 import com.navercorp.pinpoint.web.websocket.message.PinpointWebSocketMessageConverter;
 import com.navercorp.pinpoint.web.websocket.message.PinpointWebSocketMessageType;
 import com.navercorp.pinpoint.web.websocket.message.RequestMessage;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.lang.NonNull;
@@ -30,6 +30,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.io.IOException;
 import java.util.Objects;
 
 /**
@@ -38,7 +39,7 @@ import java.util.Objects;
 public abstract class ActiveThreadCountHandler extends TextWebSocketHandler implements PinpointWebSocketHandler {
 
     public static final String APPLICATION_NAME_KEY = "applicationName";
-    public static final String DEFAULT_REQUEST_MAPPING = "/agent/activeThread";
+    public static final String DEFAULT_REQUEST_MAPPING = "/api/agent/activeThread";
 
     static final String API_ACTIVE_THREAD_COUNT = "activeThreadCount";
 
@@ -77,14 +78,9 @@ public abstract class ActiveThreadCountHandler extends TextWebSocketHandler impl
         PinpointWebSocketMessage webSocketMessage = messageConverter.getWebSocketMessage(message.getPayload());
         PinpointWebSocketMessageType webSocketMessageType = webSocketMessage.getType();
         switch (webSocketMessageType) {
-            case REQUEST:
-                handleRequestMessage0(webSocketSession, (RequestMessage) webSocketMessage);
-                break;
-            case PONG:
-                handlePongMessage0(webSocketSession);
-                break;
-            default:
-                logger.warn("Unexpected WebSocketMessageType received. messageType:{}.", webSocketMessageType);
+            case REQUEST -> handleRequestMessage0(webSocketSession, (RequestMessage) webSocketMessage);
+            case PONG -> handlePongMessage0(webSocketSession);
+            default -> logger.warn("Unexpected WebSocketMessageType received. messageType:{}.", webSocketMessageType);
         }
 
         // this method will be checked socket status.
@@ -101,7 +97,9 @@ public abstract class ActiveThreadCountHandler extends TextWebSocketHandler impl
         if (API_ACTIVE_THREAD_COUNT.equals(command)) {
             handleActiveThreadCount(webSocketSession, requestMessage);
         } else {
-            logger.debug("unknown command:{}", command);
+            logger.warn("Unknown command:{}", command);
+            CloseStatus status = CloseStatus.BAD_DATA.withReason("Unknown command");
+            closeSession(webSocketSession, status);
         }
     }
 
@@ -109,6 +107,9 @@ public abstract class ActiveThreadCountHandler extends TextWebSocketHandler impl
         final String applicationName = MapUtils.getString(requestMessage.getParameters(), APPLICATION_NAME_KEY);
         if (applicationName != null) {
             handleActiveThreadCount(webSocketSession, applicationName);
+        } else {
+            CloseStatus status = CloseStatus.BAD_DATA.withReason("applicationName not found");
+            closeSession(webSocketSession, status);
         }
     }
 
@@ -117,8 +118,8 @@ public abstract class ActiveThreadCountHandler extends TextWebSocketHandler impl
     private void closeSession(WebSocketSession session, CloseStatus status) {
         try {
             session.close(status);
-        } catch (Exception e) {
-            logger.warn(e.getMessage(), e);
+        } catch (IOException e) {
+            logger.warn("Failed to close session. session:{}, status:{}", session, status, e);
         }
     }
 

@@ -17,11 +17,13 @@
 
 package com.navercorp.pinpoint.web.applicationmap.map;
 
+import com.google.common.util.concurrent.MoreExecutors;
 import com.navercorp.pinpoint.common.server.util.time.Range;
 import com.navercorp.pinpoint.common.trace.ServiceType;
 import com.navercorp.pinpoint.common.trace.ServiceTypeFactory;
 import com.navercorp.pinpoint.common.trace.ServiceTypeProperty;
 import com.navercorp.pinpoint.web.applicationmap.link.LinkKey;
+import com.navercorp.pinpoint.web.applicationmap.map.processor.LinkDataMapProcessor;
 import com.navercorp.pinpoint.web.applicationmap.rawdata.LinkCallData;
 import com.navercorp.pinpoint.web.applicationmap.rawdata.LinkData;
 import com.navercorp.pinpoint.web.applicationmap.rawdata.LinkDataDuplexMap;
@@ -33,13 +35,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -75,20 +77,12 @@ public abstract class LinkSelectorTestBase {
     public void setUp() throws Exception {
         this.linkDataMapService = mock(LinkDataMapService.class);
         this.hostApplicationMapDao = mock(HostApplicationMapDao.class);
-        this.linkSelectorFactory = new LinkSelectorFactory(linkDataMapService, applicationsMapCreatorFactory, hostApplicationMapDao, Optional.empty());
+        this.linkSelectorFactory = new LinkSelectorFactory(linkDataMapService, applicationsMapCreatorFactory, hostApplicationMapDao, Optional.empty(), () -> LinkDataMapProcessor.NO_OP);
     }
 
     @AfterEach
     public void cleanUp() {
-        executor.shutdown();
-        try {
-            if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
-                executor.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            executor.shutdownNow();
-            Thread.currentThread().interrupt();
-        }
+        MoreExecutors.shutdownAndAwaitTermination(executor, Duration.ofSeconds(3));
     }
 
     final LinkDataMap newEmptyLinkDataMap() {

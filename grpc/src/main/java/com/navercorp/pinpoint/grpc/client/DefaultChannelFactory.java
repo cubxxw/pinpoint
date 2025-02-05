@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 NAVER Corp.
+ * Copyright 2024 NAVER Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,11 @@
 
 package com.navercorp.pinpoint.grpc.client;
 
+import com.google.common.util.concurrent.MoreExecutors;
 import com.navercorp.pinpoint.common.profiler.concurrent.PinpointThreadFactory;
 import com.navercorp.pinpoint.grpc.ChannelTypeEnum;
-import com.navercorp.pinpoint.grpc.ExecutorUtils;
 import com.navercorp.pinpoint.grpc.client.config.ClientOption;
+import com.navercorp.pinpoint.grpc.client.config.ClientRetryOption;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannel;
 import io.grpc.Metadata;
@@ -37,6 +38,7 @@ import io.netty.util.concurrent.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -63,6 +65,9 @@ public class DefaultChannelFactory implements ChannelFactory {
     // nullable
     private final SslContext sslContext;
 
+    // nullable
+    private final ClientRetryOption clientRetryOption;
+
     private final List<ClientInterceptor> clientInterceptorList;
     private final NameResolverProvider nameResolverProvider;
 
@@ -78,7 +83,8 @@ public class DefaultChannelFactory implements ChannelFactory {
                           NameResolverProvider nameResolverProvider,
                           ClientOption clientOption,
                           List<ClientInterceptor> clientInterceptorList,
-                          SslContext sslContext) {
+                          SslContext sslContext,
+                          ClientRetryOption clientRetryOption) {
         this.factoryName = Objects.requireNonNull(factoryName, "factoryName");
         this.executorQueueSize = executorQueueSize;
         this.headerFactory = Objects.requireNonNull(headerFactory, "headerFactory");
@@ -90,6 +96,8 @@ public class DefaultChannelFactory implements ChannelFactory {
         this.clientInterceptorList = new ArrayList<>(clientInterceptorList);
         // nullable
         this.sslContext = sslContext;
+        // nullable
+        this.clientRetryOption = clientRetryOption;
 
 
         ChannelType channelType = getChannelType();
@@ -157,6 +165,12 @@ public class DefaultChannelFactory implements ChannelFactory {
             channelBuilder.negotiationType(NegotiationType.TLS);
         }
 
+        // RetryOption
+        if (clientRetryOption != null) {
+            setupRetryOption(channelBuilder);
+        }
+
+
         channelBuilder.maxTraceEvents(clientOption.getMaxTraceEvent());
 
         return channelBuilder.build();
@@ -210,6 +224,18 @@ public class DefaultChannelFactory implements ChannelFactory {
         }
     }
 
+    private void setupRetryOption(final NettyChannelBuilder channelBuilder) {
+        channelBuilder.enableRetry();
+        channelBuilder.retryBufferSize(clientRetryOption.getRetryBufferSize());
+        channelBuilder.perRpcBufferLimit(clientRetryOption.getPerRpcBufferLimit());
+
+        //channelBuilder.disableServiceConfigLookUp();
+        channelBuilder.defaultServiceConfig(clientRetryOption.getRetryServiceConfig());
+        if (logger.isDebugEnabled()) {
+            logger.debug("Set clientRetryOption {}. name={}", clientRetryOption, factoryName);
+        }
+    }
+
     @Override
     public void close() {
         final Future<?> future = eventLoopGroup.shutdownGracefully();
@@ -219,23 +245,25 @@ public class DefaultChannelFactory implements ChannelFactory {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        ExecutorUtils.shutdownExecutorService(factoryName + "-eventLoopExecutor", eventLoopExecutor);
-        ExecutorUtils.shutdownExecutorService(factoryName + "-executorService", executorService);
+        if (!MoreExecutors.shutdownAndAwaitTermination(eventLoopExecutor, Duration.ofSeconds(3))) {
+            logger.warn("{}-eventLoopExecutor shutdown failed", factoryName);
+        }
+        if (!MoreExecutors.shutdownAndAwaitTermination(executorService, Duration.ofSeconds(3))) {
+            logger.warn("{}-executorService shutdown failed", factoryName);
+        }
     }
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("DefaultChannelFactory{");
-        sb.append("factoryName='").append(factoryName).append('\'');
-        sb.append(", executorQueueSize=").append(executorQueueSize);
-        sb.append(", headerFactory=").append(headerFactory);
-        sb.append(", clientOption=").append(clientOption);
-        sb.append(", clientInterceptorList=").append(clientInterceptorList);
-        sb.append(", nameResolverProvider=").append(nameResolverProvider);
-        sb.append(", eventLoopGroup=").append(eventLoopGroup);
-        sb.append(", eventLoopExecutor=").append(eventLoopExecutor);
-        sb.append(", executorService=").append(executorService);
-        sb.append('}');
-        return sb.toString();
+        return "DefaultChannelFactory{" + "factoryName='" + factoryName + '\'' +
+                ", executorQueueSize=" + executorQueueSize +
+                ", headerFactory=" + headerFactory +
+                ", clientOption=" + clientOption +
+                ", clientInterceptorList=" + clientInterceptorList +
+                ", nameResolverProvider=" + nameResolverProvider +
+                ", eventLoopGroup=" + eventLoopGroup +
+                ", eventLoopExecutor=" + eventLoopExecutor +
+                ", executorService=" + executorService +
+                '}';
     }
 }

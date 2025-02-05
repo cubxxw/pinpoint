@@ -17,15 +17,16 @@ public class SimpleController {
     @RequestMapping("/getCurrentTimestamp")
     @Description("Returns the server's current timestamp.")
     public Map<String, Object> getCurrentTimestamp() {
-        Map<String, Object> map = new HashMap<String, Object>();
+        Map<String, Object> map = new HashMap<>();
         map.put("getCurrentTimestamp", System.currentTimeMillis());
 
         return map;
     }
 
     @RequestMapping("/testUserInputRequestAttribute")
+    @Description("Test user input request attribute \"pinpoint.metric.uri-template\"= \"/userInput\".")
     public Map<String, Object> testUserInputAttribute(HttpServletRequest request) {
-        Map<String, Object> map = new HashMap<String, Object>();
+        Map<String, Object> map = new HashMap<>();
         map.put("message", "test user input attribute");
         request.setAttribute("pinpoint.metric.uri-template", "/userInput");
         return map;
@@ -36,7 +37,7 @@ public class SimpleController {
     public Map<String, Object> sleep3() throws InterruptedException {
         Thread.sleep(3000);
 
-        Map<String, Object> map = new HashMap<String, Object>();
+        Map<String, Object> map = new HashMap<>();
         map.put("message", "ok");
 
         return map;
@@ -47,7 +48,7 @@ public class SimpleController {
     public Map<String, Object> sleep5() throws InterruptedException {
         Thread.sleep(5000);
 
-        Map<String, Object> map = new HashMap<String, Object>();
+        Map<String, Object> map = new HashMap<>();
         map.put("message", "ok");
 
         return map;
@@ -58,14 +59,14 @@ public class SimpleController {
     public Map<String, Object> sleep7() throws InterruptedException {
         Thread.sleep(7000);
 
-        Map<String, Object> map = new HashMap<String, Object>();
+        Map<String, Object> map = new HashMap<>();
         map.put("message", "ok");
 
         return map;
     }
 
     @RequestMapping("/randomResponseTime/**")
-    @Description("Waits for random time and then returns")
+    @Description("Waits for a random time (0s ~ 10s), then has a (20%) chance to fail.")
     public Map<String, Object> randomResponseTime() throws InterruptedException {
         double a = Math.random() * 10000;
         double fail = Math.random() * 10;
@@ -75,13 +76,14 @@ public class SimpleController {
         if ( fail < 2.0 ) {
             throw new RuntimeException();
         }
-        Map<String, Object> map = new HashMap<String, Object>();
+        Map<String, Object> map = new HashMap<>();
         map.put("message", "ok");
 
         return map;
     }
 
     @RequestMapping("/fails")
+    @Description("Call that fails with an RuntimeException.")
     public void fails() throws Exception {
         throw new RuntimeException();
     }

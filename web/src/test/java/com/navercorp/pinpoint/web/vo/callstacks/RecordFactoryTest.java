@@ -25,7 +25,6 @@ import com.navercorp.pinpoint.common.server.bo.MethodTypeEnum;
 import com.navercorp.pinpoint.common.server.bo.SpanBo;
 import com.navercorp.pinpoint.common.server.bo.SpanEventBo;
 import com.navercorp.pinpoint.common.server.trace.ApiParserProvider;
-import com.navercorp.pinpoint.common.server.util.Log4j2CommonLoggerFactory;
 import com.navercorp.pinpoint.common.server.util.ServerTraceMetadataLoaderService;
 import com.navercorp.pinpoint.loader.service.AnnotationKeyRegistryService;
 import com.navercorp.pinpoint.loader.service.DefaultAnnotationKeyRegistryService;
@@ -94,7 +93,7 @@ public class RecordFactoryTest {
         final RecordFactory factory = newRecordFactory();
 
         SpanBo spanBo = new SpanBo();
-        spanBo.setTransactionId(new TransactionId("test", 0, 0));
+        spanBo.setTransactionId(TransactionId.of("test", 0, 0));
         spanBo.setExceptionInfo(1, null);
         Align align = new SpanAlign(spanBo);
 
@@ -112,7 +111,7 @@ public class RecordFactoryTest {
 
         Record exceptionRecord = factory.getParameter(0, 0, "testMethod", null);
 
-        Assertions.assertEquals(exceptionRecord.getArguments(), "null");
+        Assertions.assertEquals("null", exceptionRecord.getArguments());
     }
 
     // 0 = {parent = null, child = 1 reference, sibling = null
@@ -222,7 +221,7 @@ public class RecordFactoryTest {
                 .setAgentName("")
                 .setApplicationId("express-node-sample-name")
                 .setAgentStartTime(1670293953108L)
-                .setTransactionId(new TransactionId("express-node-sample-id", 1670293953108L, 30))
+                .setTransactionId(TransactionId.of("express-node-sample-id", 1670293953108L, 30))
                 .setParentSpanId(-1)
                 .setParentApplicationId(null)
                 .setParentApplicationServiceType((short) 0)
@@ -324,10 +323,8 @@ public class RecordFactoryTest {
         // annotationKeyRegistryService: DefaultAnnotationKeyRegistryService
         // annotationKeyLocator: AnnotationKeyRegistry TraceMetaDataLoaderService: ServerTraceMetadataLoaderService
         // ServerTraceMetadataLoaderService() -> this.annotationKeyRegistry = traceMetadataLoader.createAnnotationKeyRegistry();
-        // commonLoggerFactory -> Log4j2CommonLoggerFactory
         TraceMetadataLoaderService mockedTypeLoaderService = mock(ServerTraceMetadataLoaderService.class);
-        Log4j2CommonLoggerFactory loggerFactory = new Log4j2CommonLoggerFactory();
-        TraceMetadataLoader traceMetadataLoader = new TraceMetadataLoader(loggerFactory);
+        TraceMetadataLoader traceMetadataLoader = new TraceMetadataLoader();
         AnnotationKeyRegistry annotationKeyRegistry = traceMetadataLoader.createAnnotationKeyRegistry();
         when(mockedTypeLoaderService.getAnnotationKeyLocator()).thenReturn(annotationKeyRegistry);
         AnnotationKeyRegistryService mockedAnnotationKeyRegistryService = new DefaultAnnotationKeyRegistryService(mockedTypeLoaderService);

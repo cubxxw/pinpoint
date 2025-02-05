@@ -16,14 +16,18 @@
 
 package com.navercorp.pinpoint.common.profiler.message;
 
+import java.io.Closeable;
+
 /**
  * @author emeroad
  * @author netspider
  */
-public interface DataSender<REQ> {
+public interface DataSender<REQ> extends DataConsumer<REQ>, Closeable {
 
+    @Override
     boolean send(REQ data);
 
-    void stop();
+    @Override
+    void close();
 
 }

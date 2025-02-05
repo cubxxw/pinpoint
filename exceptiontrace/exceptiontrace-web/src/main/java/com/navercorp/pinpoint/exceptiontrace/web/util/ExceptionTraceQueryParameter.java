@@ -17,8 +17,10 @@
 package com.navercorp.pinpoint.exceptiontrace.web.util;
 
 import com.navercorp.pinpoint.common.util.StringUtils;
+import com.navercorp.pinpoint.exceptiontrace.web.ExceptionTraceWebConfig;
 import com.navercorp.pinpoint.metric.web.util.QueryParameter;
 import com.navercorp.pinpoint.metric.web.util.TimePrecision;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
@@ -33,6 +35,8 @@ import java.util.stream.Collectors;
  */
 public class ExceptionTraceQueryParameter extends QueryParameter {
 
+    private final String tableName;
+
     private final String tenantId;
     private final String applicationName;
     private final String agentId;
@@ -45,11 +49,15 @@ public class ExceptionTraceQueryParameter extends QueryParameter {
     private final OrderByAttributes orderBy;
     private final String isDesc;
     private final List<GroupByAttributes> groupByAttributes;
+    private final FilterByAttributes filterByAttributes;
 
     private final long timeWindowRangeCount;
 
-    protected ExceptionTraceQueryParameter(Builder builder) {
+    protected ExceptionTraceQueryParameter(
+            Builder builder
+    ) {
         super(builder.getRange(), builder.getTimePrecision(), builder.getLimit());
+        this.tableName = builder.tableName;
         this.tenantId = builder.tenantId;
         this.applicationName = builder.applicationName;
         this.agentId = builder.agentId;
@@ -60,13 +68,20 @@ public class ExceptionTraceQueryParameter extends QueryParameter {
         this.orderBy = builder.orderBy;
         this.isDesc = builder.isDesc;
         this.groupByAttributes = builder.groupByAttributes;
+        this.filterByAttributes = builder.filterByAttributes;
         this.timeWindowRangeCount = builder.timeWindowRangeCount;
+    }
+
+    public List<GroupByAttributes> getGroupByAttributes() {
+        return groupByAttributes;
     }
 
     public static class Builder extends QueryParameter.Builder<Builder> {
 
         private static final int MAX_LIMIT = 65536;
         private Integer hardLimit = null;
+
+        private String tableName;
 
         private String tenantId;
         private String applicationName;
@@ -81,12 +96,18 @@ public class ExceptionTraceQueryParameter extends QueryParameter {
         private OrderByAttributes orderBy;
         private String isDesc;
         private final List<GroupByAttributes> groupByAttributes = new ArrayList<>();
+        private final FilterByAttributes filterByAttributes = new FilterByAttributes();
 
         private long timeWindowRangeCount = 0;
 
         @Override
         protected Builder self() {
             return this;
+        }
+
+        public Builder setTableName(String tableName) {
+            this.tableName = tableName;
+            return self();
         }
 
         public Builder setTenantId(String tenantId) {
@@ -156,6 +177,11 @@ public class ExceptionTraceQueryParameter extends QueryParameter {
             return self();
         }
 
+        public Builder setGroupByAttributes(List<GroupByAttributes> groupByAttributes) {
+            this.groupByAttributes.addAll(groupByAttributes);
+            return self();
+        }
+
         public Builder addAllGroupByList(Collection<String> strings) {
             if (strings == null) {
                 return self();
@@ -164,8 +190,19 @@ public class ExceptionTraceQueryParameter extends QueryParameter {
                             GroupByAttributes::fromValue
                     )
                     .filter(Objects::nonNull)
-                    .distinct().sorted().collect(Collectors.toList());
+                    .distinct().sorted().toList();
             this.groupByAttributes.addAll(groupByAttributesList);
+            return self();
+        }
+
+        public Builder addAllFilters(Collection<String> strings) {
+            if (strings == null) {
+                return self();
+            }
+            for (String string : strings) {
+                String[] tag = string.split(":", 2);
+                filterByAttributes.put(tag[0], tag[1]);
+            }
             return self();
         }
 
@@ -198,7 +235,8 @@ public class ExceptionTraceQueryParameter extends QueryParameter {
     @Override
     public String toString() {
         return "ExceptionTraceQueryParameter{" +
-                "tenantId='" + tenantId + '\'' +
+                "tableName='" + tableName + '\'' +
+                ", tenantId='" + tenantId + '\'' +
                 ", applicationName='" + applicationName + '\'' +
                 ", agentId='" + agentId + '\'' +
                 ", transactionId='" + transactionId + '\'' +
@@ -208,6 +246,7 @@ public class ExceptionTraceQueryParameter extends QueryParameter {
                 ", orderBy=" + orderBy +
                 ", isDesc='" + isDesc + '\'' +
                 ", groupByAttributes=" + groupByAttributes +
+                ", filterByAttributes=" + filterByAttributes +
                 ", timeWindowRangeCount=" + timeWindowRangeCount +
                 '}';
     }

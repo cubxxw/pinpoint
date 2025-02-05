@@ -16,6 +16,7 @@
 
 package com.navercorp.pinpoint.metric.web.service;
 
+import com.navercorp.pinpoint.common.server.util.time.DateTimeUtils;
 import com.navercorp.pinpoint.common.util.CollectionUtils;
 import com.navercorp.pinpoint.metric.common.model.MetricTag;
 import com.navercorp.pinpoint.metric.common.model.MetricTagCollection;
@@ -29,7 +30,6 @@ import com.navercorp.pinpoint.metric.web.model.basic.metric.group.MatchingRule;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -93,20 +93,19 @@ public class SystemMetricHostInfoServiceImpl implements SystemMetricHostInfoServ
     public List<MetricTag> getTag(MetricDataSearchKey metricDataSearchKey, Field field, List<Tag> tags) {
         MatchingRule matchingRule = field.getMatchingRule();
 
-        switch (matchingRule) {
-            case EXACT_ONE:
-                return getExactMatchingTag(metricDataSearchKey, field);
-            case ANY_ONE:
-                return getAnyOneTag(metricDataSearchKey, field);
-            case PASSED_ALL :
-                return createTag(metricDataSearchKey, field, tags);
-            default :
-                throw new UnsupportedOperationException("unsupported matchingRule:" + matchingRule);
-        }
+        return switch (matchingRule) {
+            case EXACT_ONE -> getExactMatchingTag(metricDataSearchKey, field);
+            case ANY_ONE -> getAnyOneTag(metricDataSearchKey, field);
+            case PASSED_ALL -> createTag(metricDataSearchKey, field, tags);
+            default -> throw new UnsupportedOperationException("unsupported matchingRule:" + matchingRule);
+        };
     }
 
     private List<MetricTag> getAnyOneTag(MetricDataSearchKey metricDataSearchKey, Field field) {
-        MetricTagKey metricTagKey = new MetricTagKey(metricDataSearchKey.getTenantId(), metricDataSearchKey.getHostGroupName(), metricDataSearchKey.getHostName(), metricDataSearchKey.getMetricName(), field.getName(), getSaveTime());
+        long saveTime = getSaveTime();
+        MetricTagKey metricTagKey = new MetricTagKey(metricDataSearchKey.getTenantId(),
+                metricDataSearchKey.getHostGroupName(), metricDataSearchKey.getHostName(),
+                metricDataSearchKey.getMetricName(), field.getName(), saveTime);
         MetricTagCollection metricTagCollection = systemMetricHostInfoDao.selectMetricTagCollection(metricTagKey);
 
         List<MetricTag> metricTagList = metricTagCollection.getMetricTagList();
@@ -157,13 +156,6 @@ public class SystemMetricHostInfoServiceImpl implements SystemMetricHostInfoServ
     }
 
     private long getSaveTime() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        calendar.clear(Calendar.MINUTE);
-        calendar.clear(Calendar.SECOND);
-        calendar.clear(Calendar.MILLISECOND);
-        calendar.set(Calendar.DAY_OF_WEEK, calendar.getFirstDayOfWeek());
-
-        return calendar.getTimeInMillis();
+        return DateTimeUtils.previousOrSameSundayToMillis();
     }
 }

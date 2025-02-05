@@ -1,0 +1,38 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  jackson:
+    mapper:
+      default-view-inclusion: true
+  profiles:
+    active: release, metric
+
+server:
+  port: 8080
+  error:
+    path: /api-public/error
+    include-exception: true
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: always
+    whitelabel:
+      enabled: true
+  max-http-request-header-size: 32678
+
+pinpoint:
+  modules:
+    web:
+      exceptiontrace:
+        enabled: true
+      inspector:
+        enabled: true
+    realtime:
+      enabled: true
+    otlpmetric:
+      enabled: true
+      
+pinpoint.web.websocket:
+  async-send-timeout:
+  max-session-idle-timeout: 10800000 # 3 hours
+  max-binary-message-buffer-size:
+  max-text-message-buffer-size:

@@ -16,6 +16,7 @@
 
 package com.navercorp.pinpoint.grpc;
 
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.Empty;
 import com.navercorp.pinpoint.common.profiler.concurrent.PinpointThreadFactory;
 import com.navercorp.pinpoint.common.trace.ServiceType;
@@ -33,9 +34,20 @@ import com.navercorp.pinpoint.grpc.server.TransportMetadataServerInterceptor;
 import com.navercorp.pinpoint.grpc.trace.PSpan;
 import com.navercorp.pinpoint.grpc.trace.PSpanMessage;
 import com.navercorp.pinpoint.grpc.trace.SpanGrpc;
-import io.grpc.*;
+import io.grpc.CallOptions;
+import io.grpc.Channel;
+import io.grpc.ClientCall;
+import io.grpc.ClientInterceptor;
+import io.grpc.ManagedChannel;
+import io.grpc.MethodDescriptor;
+import io.grpc.NameResolverProvider;
+import io.grpc.Server;
+import io.grpc.ServerInterceptor;
+import io.grpc.ServerTransportFilter;
+import io.grpc.Status;
 import io.grpc.internal.PinpointDnsNameResolverProvider;
 import io.grpc.stub.StreamObserver;
+import io.netty.buffer.PooledByteBufAllocator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.AfterAll;
@@ -44,6 +56,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLException;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -86,9 +99,8 @@ public class ChannelFactoryTest {
             server.awaitTermination();
             serverFactory.close();
         }
-        ExecutorUtils.shutdownExecutorService("test-executor", executorService);
-
-        ExecutorUtils.shutdownExecutorService("dnsExecutor", dnsExecutorService);
+        MoreExecutors.shutdownAndAwaitTermination(executorService, Duration.ofSeconds(3));
+        MoreExecutors.shutdownAndAwaitTermination(dnsExecutorService, Duration.ofSeconds(3));
     }
 
     @Test
@@ -155,14 +167,13 @@ public class ChannelFactoryTest {
             throws SSLException, NoSuchFieldException, IllegalAccessException {
         logger.debug("server start");
 
-        serverFactory = new ServerFactory(ChannelFactoryTest.class.getSimpleName() + "-server", "127.0.0.1", PORT, executorService, null, ServerOption.newBuilder().build());
+        serverFactory = new ServerFactory(ChannelFactoryTest.class.getSimpleName() + "-server", "127.0.0.1", PORT, executorService, null, ServerOption.newBuilder().build(), PooledByteBufAllocator.DEFAULT);
         spanService = new SpanService();
 
-        serverFactory.addService(spanService);
+        serverFactory.addService(spanService.bindService());
 
         addFilter(serverFactory);
-        Server server = serverFactory.build();
-        return server;
+        return serverFactory.build();
     }
 
     private static void addFilter(ServerFactory serverFactory) {
@@ -201,7 +212,8 @@ public class ChannelFactoryTest {
 
                 @Override
                 public void onError(Throwable t) {
-                    logger.debug("server-onError:{} status:{}", t.getMessage(), Status.fromThrowable(t), t);
+                    Status status = Status.fromThrowable(t);
+                    logger.debug("server-onError:{}", status);
                 }
 
                 @Override

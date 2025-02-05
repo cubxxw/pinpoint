@@ -157,7 +157,8 @@ public class AgentClientMock {
 
         @Override
         public void onError(Throwable throwable) {
-            logger.info("Error ", throwable);
+            Status status = Status.fromThrowable(throwable);
+            logger.info("onError:{}", status);
         }
 
         @Override
@@ -220,21 +221,12 @@ public class AgentClientMock {
                 return;
             }
 
-            PickResult pickResult;
-            switch (currentState) {
-                case CONNECTING:
-                    pickResult = PickResult.withNoResult();
-                    break;
-                case READY:
-                case IDLE:
-                    pickResult = PickResult.withSubchannel(subchannel);
-                    break;
-                case TRANSIENT_FAILURE:
-                    pickResult = PickResult.withError(stateInfo.getStatus());
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unsupported state:" + currentState);
-            }
+            PickResult pickResult = switch (currentState) {
+                case CONNECTING -> PickResult.withNoResult();
+                case READY, IDLE -> PickResult.withSubchannel(subchannel);
+                case TRANSIENT_FAILURE -> PickResult.withError(stateInfo.getStatus());
+                default -> throw new IllegalArgumentException("Unsupported state:" + currentState);
+            };
 
             helper.updateBalancingState(currentState, new Picker(pickResult));
         }

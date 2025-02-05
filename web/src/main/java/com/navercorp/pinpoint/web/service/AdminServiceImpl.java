@@ -19,6 +19,7 @@ package com.navercorp.pinpoint.web.service;
 import com.navercorp.pinpoint.common.server.util.time.Range;
 import com.navercorp.pinpoint.common.util.CollectionUtils;
 import com.navercorp.pinpoint.web.dao.ApplicationIndexDao;
+import com.navercorp.pinpoint.web.service.component.ActiveAgentValidator;
 import com.navercorp.pinpoint.web.vo.Application;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -44,11 +45,11 @@ public class AdminServiceImpl implements AdminService {
 
     private final ApplicationIndexDao applicationIndexDao;
 
-    private final AgentInfoService agentInfoService;
+    private final ActiveAgentValidator activeAgentService;
 
-    public AdminServiceImpl(ApplicationIndexDao applicationIndexDao, AgentInfoService agentInfoService) {
+    public AdminServiceImpl(ApplicationIndexDao applicationIndexDao, ActiveAgentValidator activeAgentService) {
         this.applicationIndexDao = Objects.requireNonNull(applicationIndexDao, "applicationIndexDao");
-        this.agentInfoService = Objects.requireNonNull(agentInfoService, "agentInfoService");
+        this.activeAgentService = Objects.requireNonNull(activeAgentService, "activeAgentValidator");
     }
 
     @Override
@@ -62,6 +63,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Deprecated
     public void removeInactiveAgents(int durationDays) {
         if (durationDays < MIN_DURATION_DAYS_FOR_INACTIVITY) {
             throw new IllegalArgumentException("duration may not be less than " + MIN_DURATION_DAYS_FOR_INACTIVITY + " days");
@@ -83,25 +85,12 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public int removeInactiveAgentInApplication(String applicationName, int durationDays) {
-        int retry = 3;
-
-        while (retry-- > 0) {
-            try {
-                return removeInactiveAgentInApplication0(applicationName, durationDays);
-            } catch (Exception e) {
-                logger.error("Backoff to remove inactive agents in application {}", applicationName, e);
-                waitOneMinute();
-            }
-        }
-        logger.error("Failed to remove inactive agents in application {}", applicationName);
-
-        return 0;
-    }
-
-    private void waitOneMinute() {
         try {
-            Thread.sleep(60000);
-        } catch (Exception ignored) {}
+            return removeInactiveAgentInApplication0(applicationName, durationDays);
+        } catch (Exception e) {
+            logger.error("Backoff to remove inactive agents in application {}", applicationName, e);
+        }
+        return 0;
     }
 
     private int removeInactiveAgentInApplication0(String applicationName, int durationDays) {
@@ -196,7 +185,7 @@ public class AdminServiceImpl implements AdminService {
         long now = System.currentTimeMillis();
         Range range = Range.between(now - TimeUnit.DAYS.toMillis(durationDays), now);
 
-        return !this.agentInfoService.isActiveAgent(agentId, range);
+        return !this.activeAgentService.isActiveAgent(agentId, range);
     }
 
 }

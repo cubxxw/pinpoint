@@ -26,23 +26,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class ServerTimeController {
 
-    @GetMapping(value = "/serverTime")
+    @GetMapping(value = {"/api/serverTime", "/serverTime"})
     public ServerTime getServerTime() {
         return new ServerTime();
     }
 
 
-    private static class ServerTime {
-
-        private final long currentServerTime;
+    public static class ServerTime {
 
         public ServerTime() {
-            this.currentServerTime = System.currentTimeMillis();
         }
 
         @JsonProperty("currentServerTime")
         public long getCurrentServerTime() {
-            return currentServerTime;
+            return System.currentTimeMillis();
         }
     }
 

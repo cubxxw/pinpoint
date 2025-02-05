@@ -26,4 +26,5 @@ public interface SinkRepository<S> {
 
     void invalidate(long id);
 
+    void error(long id, Throwable th);
 }

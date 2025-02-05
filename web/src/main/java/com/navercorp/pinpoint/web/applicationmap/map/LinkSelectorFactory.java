@@ -27,6 +27,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * @author HyunGil Jeong
@@ -41,34 +42,36 @@ public class LinkSelectorFactory {
     private final HostApplicationMapDao hostApplicationMapDao;
 
     private final ServerMapDataFilter serverMapDataFilter;
+    private final Supplier<LinkDataMapProcessor> applicationLimiterProcessorFactory;
 
     public LinkSelectorFactory(
             LinkDataMapService linkDataMapService,
             ApplicationsMapCreatorFactory applicationsMapCreatorFactory,
             HostApplicationMapDao hostApplicationMapDao,
-            Optional<ServerMapDataFilter> serverMapDataFilter) {
+            Optional<ServerMapDataFilter> serverMapDataFilter,
+            Supplier<LinkDataMapProcessor> applicationLimiterProcessorFactory) {
         this.linkDataMapService = Objects.requireNonNull(linkDataMapService, "linkDataMapService");
         this.applicationsMapCreatorFactory = Objects.requireNonNull(applicationsMapCreatorFactory, "applicationsMapCreatorFactory");
         this.hostApplicationMapDao = Objects.requireNonNull(hostApplicationMapDao, "hostApplicationMapDao");
         this.serverMapDataFilter = Objects.requireNonNull(serverMapDataFilter, "serverMapDataFilter").orElse(null);
+        this.applicationLimiterProcessorFactory = Objects.requireNonNull(applicationLimiterProcessorFactory, "applicationLimiterProcessorFactory");
     }
 
     public LinkSelector createLinkSelector(LinkSelectorType linkSelectorType) {
         return createLinkSelector(linkSelectorType, LinkDataMapProcessor.NO_OP, LinkDataMapProcessor.NO_OP);
     }
 
-    public LinkSelector createLinkSelector(LinkSelectorType linkSelectorType, LinkDataMapProcessor callerLinkDataMapProcessor, LinkDataMapProcessor calleeLinkDataMapProcessor) {
+    public LinkSelector createLinkSelector(LinkSelectorType linkSelectorType, LinkDataMapProcessor outLinkProcessor, LinkDataMapProcessor inLinkProcessor) {
+
         VirtualLinkMarker virtualLinkMarker = new VirtualLinkMarker();
         VirtualLinkHandler virtualLinkHandler = new VirtualLinkHandler(linkDataMapService, virtualLinkMarker);
 
-        LinkDataMapProcessors callerLinkDataMapProcessors = new LinkDataMapProcessors();
-        callerLinkDataMapProcessors.addLinkDataMapProcessor(new RpcCallProcessor(hostApplicationMapDao, virtualLinkMarker));
-        callerLinkDataMapProcessors.addLinkDataMapProcessor(callerLinkDataMapProcessor);
 
-        LinkDataMapProcessors calleeLinkDataMapProcessors = new LinkDataMapProcessors();
-        calleeLinkDataMapProcessors.addLinkDataMapProcessor(calleeLinkDataMapProcessor);
+        LinkDataMapProcessors outLinkProcessors = newOutLinkProcessors(outLinkProcessor, virtualLinkMarker);
 
-        ApplicationMapCreator applicationMapCreator = new DefaultApplicationMapCreator(linkDataMapService, callerLinkDataMapProcessors, calleeLinkDataMapProcessors);
+        LinkDataMapProcessors inLinkProcessors = newInLinkProcessor(inLinkProcessor);
+
+        ApplicationMapCreator applicationMapCreator = new DefaultApplicationMapCreator(linkDataMapService, outLinkProcessors, inLinkProcessors);
 
         ApplicationsMapCreator applicationsMapCreator = applicationsMapCreatorFactory.create(applicationMapCreator);
 
@@ -77,5 +80,20 @@ public class LinkSelectorFactory {
         } else {
             return new BidirectionalLinkSelector(applicationsMapCreator, virtualLinkHandler, serverMapDataFilter);
         }
+    }
+
+    private LinkDataMapProcessors newInLinkProcessor(LinkDataMapProcessor inLinkDataMapProcessor) {
+        LinkDataMapProcessors.Builder inLinkBuilder = LinkDataMapProcessors.newBuilder();
+        inLinkBuilder.addLinkProcessor(this.applicationLimiterProcessorFactory.get());
+        inLinkBuilder.addLinkProcessor(inLinkDataMapProcessor);
+        return inLinkBuilder.build();
+    }
+
+    private LinkDataMapProcessors newOutLinkProcessors(LinkDataMapProcessor outLinkDataMapProcessor, VirtualLinkMarker virtualLinkMarker) {
+        LinkDataMapProcessors.Builder outLinkBuilder = LinkDataMapProcessors.newBuilder();
+        outLinkBuilder.addLinkProcessor(this.applicationLimiterProcessorFactory.get());
+        outLinkBuilder.addLinkProcessor(new RpcCallProcessor(hostApplicationMapDao, virtualLinkMarker));
+        outLinkBuilder.addLinkProcessor(outLinkDataMapProcessor);
+        return outLinkBuilder.build();
     }
 }
