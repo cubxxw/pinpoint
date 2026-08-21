@@ -1,0 +1,436 @@
+# Instincts generated from https://github.com/cubxxw/pinpoint
+# Generated: 2026-06-01T08:50:48.914Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: pinpoint-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/cubxxw/pinpoint
+---
+
+# Pinpoint Commit Length
+
+## Action
+
+Write moderate-length commit messages (~60 characters)
+
+## Evidence
+
+- Average commit message length: 60 chars
+- Based on 5 commits
+
+---
+id: pinpoint-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/cubxxw/pinpoint
+---
+
+# Pinpoint Naming Files
+
+## Action
+
+Use PascalCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: PascalCase
+
+---
+id: pinpoint-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/cubxxw/pinpoint
+---
+
+# Pinpoint Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: pinpoint-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/cubxxw/pinpoint
+---
+
+# Pinpoint Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: pinpoint-test-naming
+trigger: "when creating a test file"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/cubxxw/pinpoint
+---
+
+# Pinpoint Test Naming
+
+## Action
+
+Name test files using the pattern: *.test.ts
+
+## Evidence
+
+- File pattern: *.test.ts
+- Consistent across test files
+
+---
+id: pinpoint-workflow-dependency-upgrade-across-multiple-modules
+trigger: "when doing dependency upgrade across multiple modules"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/cubxxw/pinpoint
+---
+
+# Pinpoint Workflow Dependency Upgrade Across Multiple Modules
+
+## Action
+
+Follow the dependency-upgrade-across-multiple-modules workflow:
+1. Identify the dependency and new version.
+2. Update the dependency version in all affected pom.xml files.
+3. Update any related test code or configuration if needed.
+4. Commit all changes together with a bump message.
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: **/pom.xml, **/src/test/java/**/*.java
+
+---
+id: pinpoint-workflow-add-or-update-plugin-support
+trigger: "when doing add or update plugin support"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/cubxxw/pinpoint
+---
+
+# Pinpoint Workflow Add Or Update Plugin Support
+
+## Action
+
+Follow the add-or-update-plugin-support workflow:
+1. Create or update plugin module directories and pom.xml.
+2. Add new implementation and configuration files for the new version.
+3. Add or update test classes for the new version.
+4. Update root or aggregator pom.xml to include the new modules.
+5. Update documentation if needed.
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: agent-module/plugins-*/pom.xml, agent-module/agent-testweb/*-plugin-testweb/pom.xml, agent-module/agent-testweb/*-plugin-testweb/src/main/java/**/*.java
+
+---
+id: pinpoint-workflow-bom-unification-or-restructuring
+trigger: "when doing bom unification or restructuring"
+confidence: 0.55
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/cubxxw/pinpoint
+---
+
+# Pinpoint Workflow Bom Unification Or Restructuring
+
+## Action
+
+Follow the bom-unification-or-restructuring workflow:
+1. Identify BOM files to unify or restructure.
+2. Move or merge dependency declarations into a central BOM.
+3. Update module pom.xml files to reference the new BOM.
+4. Remove or deprecate old BOM files.
+5. Commit all related changes together.
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~1x per month
+- Files: agent-module/agent-testweb/bom/pom.xml, agent-module/plugins-bom/pom.xml, agent-module/plugins-it/pom.xml
+
+---
+id: pinpoint-instinct-class-naming
+trigger: "When creating a new Java class"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct Class Naming
+
+## Action
+
+Name the class using PascalCase
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.classes
+- Consistent with Java conventions
+
+---
+id: pinpoint-instinct-function-naming
+trigger: "When defining a Java method/function"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct Function Naming
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.functions
+- Consistent with Java conventions
+
+---
+id: pinpoint-instinct-constant-naming
+trigger: "When declaring a constant in Java"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct Constant Naming
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.constants
+
+---
+id: pinpoint-instinct-file-naming
+trigger: "When creating a new Java file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct File Naming
+
+## Action
+
+Name the file using PascalCase
+
+## Evidence
+
+- Pattern in codeStyle.namingConventions.files
+
+---
+id: pinpoint-instinct-import-style
+trigger: "When importing Java classes"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct Import Style
+
+## Action
+
+Use relative imports
+
+## Evidence
+
+- Pattern in codeStyle.importStyle
+
+---
+id: pinpoint-instinct-export-style
+trigger: "When exporting Java classes or functions"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct Export Style
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in codeStyle.exportStyle
+
+---
+id: pinpoint-instinct-test-file-pattern
+trigger: "When adding a new test file (TypeScript)"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct Test File Pattern
+
+## Action
+
+Name the file with the pattern *.test.ts
+
+## Evidence
+
+- Pattern in testing.filePattern
+
+---
+id: pinpoint-instinct-test-type
+trigger: "When writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct Test Type
+
+## Action
+
+Write unit tests by default
+
+## Evidence
+
+- Pattern in testing.testTypes
+
+---
+id: pinpoint-instinct-commit-format
+trigger: "When making a commit"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct Commit Format
+
+## Action
+
+Prefix the commit message with [#issue] or [#noissue] and a short description
+
+## Evidence
+
+- Seen in commit '[#13786] Bump testcontainers from 1.21.4 to 2.0.5'
+- Seen in commit '[#noissue] Add OTel tracestate pp entry propagation'
+
+---
+id: pinpoint-instinct-commit-length
+trigger: "When writing a commit message"
+confidence: 0.8
+domain: git
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct Commit Length
+
+## Action
+
+Keep the commit message concise (~60 characters)
+
+## Evidence
+
+- Pattern in commits.averageLength
+
+---
+id: pinpoint-instinct-dependency-upgrade
+trigger: "When someone wants to update a shared dependency version across all relevant modules/plugins"
+confidence: 0.95
+domain: workflow
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct Dependency Upgrade
+
+## Action
+
+Update all affected pom.xml files and related test code, then commit with a bump message
+
+## Evidence
+
+- Workflow 'dependency-upgrade-across-multiple-modules'
+- Seen in commit '[#13786] Bump testcontainers from 1.21.4 to 2.0.5'
+
+---
+id: pinpoint-instinct-add-plugin-support
+trigger: "When someone wants to support a new major version of a framework or plugin"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct Add Plugin Support
+
+## Action
+
+Create or update plugin modules, implementation, tests, aggregator pom.xml, and documentation as needed
+
+## Evidence
+
+- Workflow 'add-or-update-plugin-support'
+- Seen in commit '[#noissue] Add Spring 7 / Spring Boot 4 plugin support and drop Spring 4'
+
+---
+id: pinpoint-instinct-bom-unification
+trigger: "When someone wants to centralize or reorganize dependency management across modules"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: cubxxw/pinpoint
+---
+
+# Pinpoint Instinct Bom Unification
+
+## Action
+
+Unify BOM files, update module references, remove deprecated BOMs, and commit all changes together
+
+## Evidence
+
+- Workflow 'bom-unification-or-restructuring'
+- Seen in commit '[#13793] Unify agent-testweb and plugins bom into pinpoint-plugins-bom'
+
